@@ -1,0 +1,205 @@
+@model LearningDocumentSystem.Business.DTOs.DocumentDetailDto
+@using LearningDocumentSystem.Common.Helpers
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">@Model.Title</h1>
+        <p class="page-subtitle">
+            <a asp-controller="Subject" asp-action="Index">@Model.SubjectName</a>
+            <i class="bi bi-chevron-right mx-1 small"></i>
+            Chương @Model.ChapterNumber: @Model.ChapterName
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+        @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+        {
+            <button type="button" class="btn btn-danger"
+                    onclick="confirmDelete(@Model.DocumentID, '@Model.Title')">
+                <i class="bi bi-trash-fill me-1"></i>Xóa
+            </button>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Document Info -->
+    <div class="col-lg-4">
+        <div class="card-custom mb-4">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-info-circle me-2"></i>Thông tin tài liệu</h5>
+            </div>
+            <div class="card-custom-body">
+                <!-- File Type Icon -->
+                <div class="doc-detail-icon text-center mb-4">
+                    @{
+                        var icon = Model.FileType switch {
+                            "pdf"  => "bi-file-earmark-pdf-fill text-danger",
+                            "docx" => "bi-file-earmark-word-fill text-primary",
+                            "pptx" => "bi-file-earmark-ppt-fill text-warning",
+                            _      => "bi-file-earmark text-secondary"
+                        };
+                    }
+                    <i class="bi @icon" style="font-size: 4rem;"></i>
+                    <div class="mt-2">
+                        <span class="badge bg-secondary fs-6">@Model.FileType.ToUpper()</span>
+                    </div>
+                </div>
+
+                <dl class="doc-detail-list">
+                    <dt><i class="bi bi-tag me-1"></i>Tiêu đề</dt>
+                    <dd>@Model.Title</dd>
+
+                    <dt><i class="bi bi-journal-bookmark me-1"></i>Môn học</dt>
+                    <dd>[@Model.SubjectCode] @Model.SubjectName</dd>
+
+                    <dt><i class="bi bi-collection me-1"></i>Chương</dt>
+                    <dd>Chương @Model.ChapterNumber: @Model.ChapterName</dd>
+
+                    <dt><i class="bi bi-hdd me-1"></i>Kích thước</dt>
+                    <dd>@FileHelper.FormatSize(Model.FileSizeInBytes)</dd>
+
+                    <dt><i class="bi bi-person-fill me-1"></i>Upload bởi</dt>
+                    <dd>@Model.UploadedByName</dd>
+
+                    <dt><i class="bi bi-calendar me-1"></i>Ngày upload</dt>
+                    <dd>@Model.UploadedAt.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt><i class="bi bi-activity me-1"></i>Trạng thái</dt>
+                    <dd>
+                        @{
+                            var (sc2, si2, st2) = Model.IndexStatus switch {
+                                "Indexed"    => ("success", "check-circle-fill", "Đã Index"),
+                                "Processing" => ("info",    "hourglass-split",   "Đang xử lý"),
+                                "Failed"     => ("danger",  "x-circle-fill",     "Thất bại"),
+                                _            => ("warning", "clock",              "Chờ xử lý")
+                            };
+                        }
+                        <span class="badge bg-@sc2 rounded-pill px-3 py-2">
+                            <i class="bi bi-@si2 me-1"></i>@st2
+                        </span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- AI Stats -->
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-cpu me-2"></i>AI Statistics</h5>
+            </div>
+            <div class="card-custom-body">
+                <div class="ai-stat-row">
+                    <div class="ai-stat">
+                        <div class="ai-stat-num text-primary">@Model.ChunkCount</div>
+                        <div class="ai-stat-label">Chunks</div>
+                    </div>
+                    <div class="ai-stat">
+                        <div class="ai-stat-num text-success">@Model.Chunks.Count(c => c.HasEmbedding)</div>
+                        <div class="ai-stat-label">Embeddings</div>
+                    </div>
+                    <div class="ai-stat">
+                        <div class="ai-stat-num text-info">1536</div>
+                        <div class="ai-stat-label">Vector Dim</div>
+                    </div>
+                </div>
+                <div class="ai-ready-badge mt-3">
+                    <i class="bi bi-robot me-2"></i>
+                    <span>Sẵn sàng RAG / Semantic Search</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chunks -->
+    <div class="col-lg-8">
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5>
+                    <i class="bi bi-layers-fill me-2"></i>
+                    Document Chunks
+                    <span class="badge bg-primary ms-2">@Model.ChunkCount</span>
+                </h5>
+                <span class="text-muted small">Nội dung tách để phục vụ AI/RAG</span>
+            </div>
+            <div class="card-custom-body" style="max-height: 70vh; overflow-y: auto;">
+                @if (!Model.Chunks.Any())
+                {
+                    <div class="empty-state py-5">
+                        <i class="bi bi-layers"></i>
+                        <p>Chưa có chunks nào được tạo</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var chunk in Model.Chunks)
+                    {
+                        <div class="chunk-item">
+                            <div class="chunk-header">
+                                <div class="chunk-meta">
+                                    <span class="chunk-index">#@(chunk.ChunkIndex + 1)</span>
+                                    @if (chunk.PageNumber.HasValue)
+                                    {
+                                        <span class="chunk-page">
+                                            <i class="bi bi-file-text me-1"></i>Trang @chunk.PageNumber
+                                        </span>
+                                    }
+                                </div>
+                                <div class="chunk-badges">
+                                    @if (chunk.HasEmbedding)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-cpu-fill me-1"></i>Embedded
+                                        </span>
+                                    }
+                                    <span class="badge bg-secondary-subtle text-secondary">
+                                        @chunk.ContentText.Length ch
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="chunk-content">@chunk.ContentText</div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p>Bạn có chắc muốn xóa tài liệu: <strong class="text-danger" id="deleteDocTitle"></strong>?</p>
+                <p class="text-muted small">Thao tác này sẽ xóa tất cả @Model.ChunkCount chunks và embeddings.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="deleteForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash-fill me-1"></i>Xóa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, title) {
+        document.getElementById('deleteDocTitle').textContent = title;
+        document.getElementById('deleteForm').action = '/Document/Delete/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+</script>
+}

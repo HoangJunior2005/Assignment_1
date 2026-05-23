@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="LearningDocumentSystem.Business/LearningDocumentSystem.Business.csproj" />
+  <Project Path="LearningDocumentSystem.Common/LearningDocumentSystem.Common.csproj" />
+  <Project Path="LearningDocumentSystem.Data/LearningDocumentSystem.Data.csproj" />
+  <Project Path="LearningDocumentSystem.Entities/LearningDocumentSystem.Entities.csproj" />
+  <Project Path="LearningDocumentSystem.Web/LearningDocumentSystem.Web.csproj" />
+</Solution>

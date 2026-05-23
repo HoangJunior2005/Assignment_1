@@ -1,0 +1,121 @@
+@model LearningDocumentSystem.Web.ViewModels.SubjectListViewModel
+@{
+    ViewData["Title"] = "Môn học";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-journal-bookmark-fill me-2"></i>Môn học</h1>
+        <p class="page-subtitle">Quản lý các môn học trong hệ thống</p>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-action">
+            <i class="bi bi-plus-circle me-2"></i>Thêm môn học
+        </a>
+    }
+</div>
+
+<div class="card-custom">
+    <div class="card-custom-body p-0">
+        @if (!Model.Subjects.Any())
+        {
+            <div class="empty-state py-5">
+                <i class="bi bi-journal-x"></i>
+                <p>Chưa có môn học nào</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-clean mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tên môn học</th>
+                            <th>Mã học phần</th>
+                            <th>Số chương</th>
+                            <th>Ngày tạo</th>
+                            @if (User.IsInRole("Admin")) { <th class="text-end">Thao tác</th> }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int i = 1;}
+                        @foreach (var s in Model.Subjects)
+                        {
+                            <tr>
+                                <td class="text-muted">@(i++)</td>
+                                <td>
+                                    <a asp-controller="Chapter" asp-action="Index"
+                                       asp-route-subjectId="@s.SubjectID" class="doc-link fw-semibold">
+                                        @s.SubjectName
+                                    </a>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                                        @s.SubjectCode
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary">
+                                        <i class="bi bi-collection me-1"></i>@s.ChapterCount chương
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@s.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-action="Edit" asp-route-id="@s.SubjectID"
+                                               class="btn btn-outline-warning" title="Sửa">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="confirmDelete(@s.SubjectID, '@s.SubjectName')"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p>Xóa môn học: <strong class="text-danger" id="delName"></strong>?</p>
+                <p class="text-muted small">Sẽ xóa tất cả chương và tài liệu liên quan (CASCADE).</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="delForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash-fill me-1"></i>Xóa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, name) {
+        document.getElementById('delName').textContent = name;
+        document.getElementById('delForm').action = '/Subject/Delete/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+</script>
+}

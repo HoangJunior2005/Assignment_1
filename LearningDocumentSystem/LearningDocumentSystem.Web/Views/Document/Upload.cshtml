@@ -1,0 +1,267 @@
+@model LearningDocumentSystem.Web.ViewModels.DocumentUploadViewModel
+@{
+    ViewData["Title"] = "Upload tài liệu";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-cloud-upload-fill me-2"></i>Upload tài liệu</h1>
+        <p class="page-subtitle">Upload PDF, DOCX, PPTX — tự động chunking & embedding</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-form me-2"></i>Thông tin tài liệu</h5>
+            </div>
+            <div class="card-custom-body">
+                <form asp-action="Upload" method="post" enctype="multipart/form-data" id="uploadForm">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="validSummary"></div>
+
+                    <!-- Title -->
+                    <div class="mb-4">
+                        <label asp-for="Title" class="form-label fw-semibold">
+                            <i class="bi bi-type me-1"></i> @Html.DisplayNameFor(m => m.Title)
+                        </label>
+                        <input asp-for="Title" class="form-control form-control-lg"
+                               placeholder="Nhập tiêu đề tài liệu..." id="docTitle"/>
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Subject + Chapter -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-journal-bookmark me-1"></i> Môn học
+                            </label>
+                            <select class="form-select" id="subjectSelect" onchange="loadUploadChapters(this.value)">
+                                <option value="">— Chọn môn học —</option>
+                                @foreach (var s in Model.Subjects)
+                                {
+                                    <option value="@s.SubjectID"
+                                            selected="@(Model.SelectedSubjectId == s.SubjectID)">
+                                        [@s.SubjectCode] @s.SubjectName
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ChapterId" class="form-label fw-semibold">
+                                <i class="bi bi-collection me-1"></i> Chương
+                            </label>
+                            <select asp-for="ChapterId" class="form-select" id="chapterSelect">
+                                <option value="">— Chọn chương —</option>
+                                @foreach (var c in Model.Chapters)
+                                {
+                                    <option value="@c.ChapterID">
+                                        Chương @c.ChapterNumber: @c.ChapterName
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="ChapterId" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <!-- Drag & Drop Upload Zone -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-paperclip me-1"></i> File tài liệu
+                        </label>
+                        <div class="upload-zone" id="uploadZone">
+                            <div class="upload-zone-inner" id="uploadZoneContent">
+                                <div class="upload-icon">
+                                    <i class="bi bi-cloud-upload"></i>
+                                </div>
+                                <p class="upload-text">Kéo thả file vào đây hoặc</p>
+                                <label for="fileInput" class="btn btn-outline-primary">
+                                    <i class="bi bi-folder2-open me-1"></i> Chọn file
+                                </label>
+                                <input type="file" asp-for="File" id="fileInput"
+                                       accept=".pdf,.docx,.pptx" class="d-none"
+                                       onchange="handleFileSelect(this)"/>
+                                <p class="upload-hint">PDF, DOCX, PPTX — tối đa 50MB</p>
+                            </div>
+
+                            <!-- File Preview (ẩn, hiện khi chọn file) -->
+                            <div class="file-preview d-none" id="filePreview">
+                                <div class="file-preview-icon" id="filePreviewIcon"></div>
+                                <div class="file-preview-info">
+                                    <div class="file-preview-name" id="filePreviewName"></div>
+                                    <div class="file-preview-size" id="filePreviewSize"></div>
+                                </div>
+                                <button type="button" class="btn-remove-file" onclick="removeFile()">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <span asp-validation-for="File" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg" id="btnUpload">
+                            <span class="btn-text">
+                                <i class="bi bi-cpu-fill me-2"></i>Upload & Xử lý AI
+                            </span>
+                            <span class="btn-loading d-none">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                Đang xử lý...
+                            </span>
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-lg">Hủy</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Info -->
+    <div class="col-lg-4">
+        <div class="card-custom mb-4">
+            <div class="card-custom-header">
+                <h6><i class="bi bi-info-circle me-2"></i>Quy trình xử lý</h6>
+            </div>
+            <div class="card-custom-body">
+                <div class="process-steps">
+                    <div class="process-step active">
+                        <div class="step-num">1</div>
+                        <div class="step-info">
+                            <div class="step-title">Upload file</div>
+                            <div class="step-desc">Lưu vào /wwwroot/uploads</div>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="step-num">2</div>
+                        <div class="step-info">
+                            <div class="step-title">Đọc nội dung</div>
+                            <div class="step-desc">Parse PDF/DOCX/PPTX</div>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="step-num">3</div>
+                        <div class="step-info">
+                            <div class="step-title">Chunking</div>
+                            <div class="step-desc">Tách thành đoạn ~800 ký tự</div>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="step-num">4</div>
+                        <div class="step-info">
+                            <div class="step-title">Embedding</div>
+                            <div class="step-desc">Sinh vector 1536 chiều</div>
+                        </div>
+                    </div>
+                    <div class="process-step">
+                        <div class="step-num">5</div>
+                        <div class="step-info">
+                            <div class="step-title">Lưu DB</div>
+                            <div class="step-desc">Sẵn sàng AI Search / RAG</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h6><i class="bi bi-shield-check me-2"></i>Định dạng hỗ trợ</h6>
+            </div>
+            <div class="card-custom-body">
+                <div class="file-type-badge mb-2">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-5 me-2"></i>
+                    <span><strong>PDF</strong> — Tài liệu portable</span>
+                </div>
+                <div class="file-type-badge mb-2">
+                    <i class="bi bi-file-earmark-word-fill text-primary fs-5 me-2"></i>
+                    <span><strong>DOCX</strong> — Microsoft Word</span>
+                </div>
+                <div class="file-type-badge">
+                    <i class="bi bi-file-earmark-ppt-fill text-warning fs-5 me-2"></i>
+                    <span><strong>PPTX</strong> — PowerPoint</span>
+                </div>
+                <hr class="my-3"/>
+                <div class="text-muted small">
+                    <i class="bi bi-hdd me-1"></i> Kích thước tối đa: <strong>50 MB</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // Drag & Drop
+    const zone = document.getElementById('uploadZone');
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+    zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            document.getElementById('fileInput').files = dt.files;
+            showFilePreview(file);
+        }
+    });
+
+    function handleFileSelect(input) {
+        if (input.files.length > 0) showFilePreview(input.files[0]);
+    }
+
+    function showFilePreview(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const icons = { pdf: 'bi-file-earmark-pdf-fill text-danger', docx: 'bi-file-earmark-word-fill text-primary', pptx: 'bi-file-earmark-ppt-fill text-warning' };
+        document.getElementById('filePreviewIcon').innerHTML = `<i class="bi ${icons[ext] || 'bi-file-earmark'} fs-1"></i>`;
+        document.getElementById('filePreviewName').textContent = file.name;
+        document.getElementById('filePreviewSize').textContent = formatBytes(file.size);
+        document.getElementById('uploadZoneContent').classList.add('d-none');
+        document.getElementById('filePreview').classList.remove('d-none');
+
+        // Auto-fill title from filename
+        const titleInput = document.getElementById('docTitle');
+        if (!titleInput.value) {
+            titleInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+        }
+    }
+
+    function removeFile() {
+        document.getElementById('fileInput').value = '';
+        document.getElementById('uploadZoneContent').classList.remove('d-none');
+        document.getElementById('filePreview').classList.add('d-none');
+    }
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+        return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    // Load chapters by subject
+    function loadUploadChapters(subjectId) {
+        const select = document.getElementById('chapterSelect');
+        select.innerHTML = '<option value="">Đang tải...</option>';
+        if (!subjectId) { select.innerHTML = '<option value="">— Chọn chương —</option>'; return; }
+        fetch('/Document/GetChapters?subjectId=' + subjectId)
+            .then(r => r.json())
+            .then(data => {
+                select.innerHTML = '<option value="">— Chọn chương —</option>';
+                data.forEach(c => {
+                    select.innerHTML += `<option value="${c.chapterID}">Chương ${c.chapterNumber}: ${c.chapterName}</option>`;
+                });
+            });
+    }
+
+    // Upload button loading state
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        document.querySelector('#btnUpload .btn-text').classList.add('d-none');
+        document.querySelector('#btnUpload .btn-loading').classList.remove('d-none');
+        document.getElementById('btnUpload').disabled = true;
+    });
+</script>
+}

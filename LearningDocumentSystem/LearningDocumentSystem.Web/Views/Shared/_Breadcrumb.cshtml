@@ -1,0 +1,27 @@
+@* Breadcrumb partial *@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Trang chủ</a></li>
+        @if (controller != "Home")
+        {
+            <li class="breadcrumb-item @(action == "Index" ? "active" : "")">
+                @if (action != "Index")
+                {
+                    <a asp-action="Index">@controller</a>
+                }
+                else
+                {
+                    @controller
+                }
+            </li>
+        }
+        @if (action != "Index" && action != null)
+        {
+            <li class="breadcrumb-item active">@(ViewData["Title"] ?? action)</li>
+        }
+    </ol>
+</nav>

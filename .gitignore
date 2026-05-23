@@ -1,0 +1,64 @@
+## Ignore Visual Studio temporary files, build results, and user-specific settings.
+
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Re]leases/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio 2015/2017/2019/2022 cache directory
+.vs/
+.vs*
+
+# MSTest test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+# Package folders
+packages/
+*.nuget.props
+*.nuget.targets
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Local database files
+*.mdf
+*.ldf
+*.ndf
+
+# Log files
+*.log
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ASP.NET Core specific
+appsettings.json
+appsettings.Development.json
+
+# User uploaded documents directory (ignore files inside, keep folder)
+**/wwwroot/uploads/*
+!**/wwwroot/uploads/.gitkeep

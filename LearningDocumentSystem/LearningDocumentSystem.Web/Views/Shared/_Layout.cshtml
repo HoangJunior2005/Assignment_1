@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Hệ thống quản lý tài liệu học tập tích hợp AI/RAG" />
+    <title>@ViewData["Title"] — LDS System</title>
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+
+@if (User.Identity?.IsAuthenticated == true)
+{
+    <!-- SIDEBAR LAYOUT -->
+    <div class="d-flex" id="wrapper">
+
+        <!-- ===== SIDEBAR ===== -->
+        <nav id="sidebar" class="sidebar-nav">
+            <!-- Logo -->
+            <div class="sidebar-brand">
+                <div class="sidebar-logo">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <span>LDS System</span>
+                </div>
+                <small class="sidebar-tagline">AI-Ready Document Hub</small>
+            </div>
+
+            <!-- User Info -->
+            <div class="sidebar-user">
+                <div class="user-avatar">
+                    @(User.FindFirst("FullName")?.Value?.Substring(0, 1).ToUpper() ?? "U")
+                </div>
+                <div class="user-info">
+                    <div class="user-name">@User.FindFirst("FullName")?.Value</div>
+                    <div class="user-role">
+                        @if (User.IsInRole("Admin"))      { <span class="badge badge-admin">Admin</span> }
+                        else if (User.IsInRole("Teacher")) { <span class="badge badge-teacher">Teacher</span> }
+                        else                               { <span class="badge badge-student">Student</span> }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <ul class="sidebar-menu">
+                <li class="menu-section">Tổng quan</li>
+                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                    <a asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+
+                <li class="menu-section">Quản lý nội dung</li>
+                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Subject" ? "active" : "")">
+                    <a asp-controller="Subject" asp-action="Index">
+                        <i class="bi bi-journal-bookmark-fill"></i> Môn học
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Chapter" ? "active" : "")">
+                    <a asp-controller="Chapter" asp-action="Index">
+                        <i class="bi bi-collection-fill"></i> Chương học
+                    </a>
+                </li>
+                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Document" ? "active" : "")">
+                    <a asp-controller="Document" asp-action="Index">
+                        <i class="bi bi-file-earmark-text-fill"></i> Tài liệu
+                    </a>
+                </li>
+
+                @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                {
+                    <li class="menu-section">Thao tác</li>
+                    <li>
+                        <a asp-controller="Document" asp-action="Upload" class="upload-link">
+                            <i class="bi bi-cloud-upload-fill"></i> Upload tài liệu
+                        </a>
+                    </li>
+                }
+            </ul>
+
+            <!-- Logout -->
+            <div class="sidebar-footer">
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn-logout">
+                        <i class="bi bi-box-arrow-left"></i> Đăng xuất
+                    </button>
+                </form>
+            </div>
+        </nav>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <div id="content-wrapper">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <button id="sidebarToggle" class="btn-sidebar-toggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="topbar-breadcrumb">
+                    @await Html.PartialAsync("_Breadcrumb")
+                </div>
+                <div class="topbar-right">
+                    <span class="topbar-user">
+                        <i class="bi bi-person-circle me-1"></i>
+                        @User.Identity?.Name
+                    </span>
+                </div>
+            </header>
+
+            <!-- Toast Notifications -->
+            @await Html.PartialAsync("_Toast")
+
+            <!-- Main Content -->
+            <main class="main-content">
+                @RenderBody()
+            </main>
+
+            <!-- Footer -->
+            <footer class="main-footer">
+                <span>© 2025 LDS System — AI-Ready Document Hub</span>
+                <span class="ms-auto text-muted">Powered by ASP.NET Core 8 + EF Core</span>
+            </footer>
+        </div>
+    </div>
+}
+else
+{
+    <!-- AUTH PAGES (Login) - Full screen -->
+    @RenderBody()
+}
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Custom JS -->
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

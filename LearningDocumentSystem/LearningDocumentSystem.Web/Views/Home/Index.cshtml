@@ -1,0 +1,164 @@
+@model LearningDocumentSystem.Business.DTOs.DashboardDto
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+        <p class="page-subtitle">Tổng quan hệ thống tài liệu học tập</p>
+    </div>
+    @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+    {
+        <a asp-controller="Document" asp-action="Upload" class="btn btn-primary btn-action">
+            <i class="bi bi-cloud-upload-fill me-2"></i>Upload tài liệu
+        </a>
+    }
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card stat-card-primary">
+            <div class="stat-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">@Model.TotalDocuments</div>
+                <div class="stat-label">Tổng tài liệu</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card stat-card-success">
+            <div class="stat-icon"><i class="bi bi-layers-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">@Model.TotalChunks</div>
+                <div class="stat-label">Tổng chunks AI</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card stat-card-warning">
+            <div class="stat-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">@Model.TotalSubjects</div>
+                <div class="stat-label">Môn học</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card stat-card-info">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-content">
+                <div class="stat-number">@Model.TotalUsers</div>
+                <div class="stat-label">Người dùng</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Index Status + Recent Docs -->
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-bar-chart-fill me-2"></i>Trạng thái xử lý</h5>
+            </div>
+            <div class="card-custom-body">
+                @{
+                    void StatusRow(string label, int count, string color) {
+                        var pct = Model.TotalDocuments > 0 ? count * 100 / Model.TotalDocuments : 0;
+                        <div class="status-item mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="status-label">
+                                    <span class="status-dot @color"></span> @label
+                                </span>
+                                <strong>@count</strong>
+                            </div>
+                            <div class="progress progress-custom">
+                                <div class="progress-bar @color" style="width: @pct%"></div>
+                            </div>
+                        </div>
+                    }
+                }
+                @{ StatusRow("Đã index",    Model.IndexedDocuments,    "bg-success"); }
+                @{ StatusRow("Chờ xử lý",  Model.PendingDocuments,    "bg-warning"); }
+                @{ StatusRow("Đang xử lý", Model.ProcessingDocuments,  "bg-info");    }
+                @{ StatusRow("Thất bại",   Model.FailedDocuments,     "bg-danger");  }
+
+                <div class="ai-ready-badge mt-4">
+                    <i class="bi bi-cpu-fill me-2"></i>
+                    <span><strong>@Model.TotalChunks</strong> chunks sẵn sàng cho AI/RAG</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-clock-history me-2"></i>Tài liệu gần đây</h5>
+                <a asp-controller="Document" asp-action="Index" class="btn btn-sm btn-outline-primary">
+                    Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-custom-body p-0">
+                @if (!Model.RecentDocuments.Any())
+                {
+                    <div class="empty-state py-5">
+                        <i class="bi bi-inbox"></i>
+                        <p>Chưa có tài liệu nào</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-clean mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tài liệu</th>
+                                    <th>Loại</th>
+                                    <th>Trạng thái</th>
+                                    <th>Ngày upload</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in Model.RecentDocuments)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a asp-controller="Document" asp-action="Detail"
+                                               asp-route-id="@doc.DocumentID" class="doc-link">
+                                                @doc.Title
+                                            </a>
+                                            <div class="doc-meta">@doc.SubjectName › @doc.ChapterName</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(doc.FileType == "pdf" ? "bg-danger" : doc.FileType == "docx" ? "bg-primary" : "bg-warning text-dark") rounded-pill">
+                                                @doc.FileType.ToUpper()
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @{
+                                                var (cls, ico, txt) = doc.IndexStatus switch {
+                                                    "Indexed"    => ("success", "check-circle-fill", "Indexed"),
+                                                    "Processing" => ("info",    "hourglass-split",   "Processing"),
+                                                    "Failed"     => ("danger",  "x-circle-fill",     "Failed"),
+                                                    _            => ("warning", "clock",              "Pending")
+                                                };
+                                            }
+                                            <span class="badge bg-@cls-subtle text-@cls border border-@cls-subtle">
+                                                <i class="bi bi-@ico me-1"></i>@txt
+                                            </span>
+                                        </td>
+                                        <td class="text-muted small">@doc.UploadedAt.ToString("dd/MM HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,280 @@
+@model LearningDocumentSystem.Web.ViewModels.DocumentListViewModel
+@{
+    ViewData["Title"] = "Danh sách tài liệu";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-file-earmark-text-fill me-2"></i>Tài liệu</h1>
+        <p class="page-subtitle">Quản lý và tìm kiếm tài liệu học tập</p>
+    </div>
+    @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+    {
+        <a asp-action="Upload" class="btn btn-primary btn-action">
+            <i class="bi bi-cloud-upload-fill me-2"></i>Upload tài liệu
+        </a>
+    }
+</div>
+
+<!-- Search & Filter -->
+<div class="card-custom mb-4">
+    <div class="card-custom-body">
+        <form method="get" id="searchForm">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">
+                        <i class="bi bi-search me-1"></i>Tìm kiếm
+                    </label>
+                    <input type="text" name="keyword" value="@Model.Keyword"
+                           class="form-control" placeholder="Tên tài liệu..."/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">
+                        <i class="bi bi-journal-bookmark me-1"></i>Môn học
+                    </label>
+                    <select name="subjectId" class="form-select" id="filterSubject" onchange="loadChapters(this.value)">
+                        <option value="">— Tất cả môn học —</option>
+                        @foreach (var s in Model.Subjects)
+                        {
+                            <option value="@s.SubjectID" selected="@(Model.SelectedSubjectId == s.SubjectID)">
+                                [@s.SubjectCode] @s.SubjectName
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold">
+                        <i class="bi bi-collection me-1"></i>Chương
+                    </label>
+                    <select name="chapterId" class="form-select" id="filterChapter">
+                        <option value="">— Tất cả chương —</option>
+                        @foreach (var c in Model.Chapters)
+                        {
+                            <option value="@c.ChapterID" selected="@(Model.SelectedChapterId == c.ChapterID)">
+                                Chương @c.ChapterNumber: @c.ChapterName
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel-fill me-1"></i>Lọc
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Info -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0 small">
+        Hiển thị <strong>@Model.Documents.Count()</strong> / <strong>@Model.TotalCount</strong> tài liệu
+        @if (!string.IsNullOrEmpty(Model.Keyword)) { <span> — Kết quả tìm kiếm: "<em>@Model.Keyword</em>"</span> }
+    </p>
+    @if (Model.TotalCount > 0)
+    {
+        <span class="text-muted small">Trang @Model.CurrentPage / @Model.TotalPages</span>
+    }
+</div>
+
+<!-- Document Table -->
+<div class="card-custom">
+    <div class="card-custom-body p-0">
+        @if (!Model.Documents.Any())
+        {
+            <div class="empty-state py-5">
+                <i class="bi bi-file-earmark-x"></i>
+                <p>Không tìm thấy tài liệu nào</p>
+                @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                {
+                    <a asp-action="Upload" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Upload tài liệu đầu tiên
+                    </a>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-clean mb-0" id="docTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tài liệu</th>
+                            <th>Môn học / Chương</th>
+                            <th>Loại</th>
+                            <th>Chunks</th>
+                            <th>Trạng thái</th>
+                            <th>Upload</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{int row = (Model.CurrentPage - 1) * Model.PageSize + 1;}
+                        @foreach (var doc in Model.Documents)
+                        {
+                            <tr>
+                                <td class="text-muted small">@(row++)</td>
+                                <td>
+                                    <a asp-action="Detail" asp-route-id="@doc.DocumentID" class="doc-link fw-semibold">
+                                        @doc.Title
+                                    </a>
+                                    <div class="doc-meta">@doc.UploadedByName</div>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold">@doc.SubjectName</div>
+                                    <div class="doc-meta">Ch.@doc.ChapterNumber: @doc.ChapterName</div>
+                                </td>
+                                <td>
+                                    @{
+                                        var ftClass = doc.FileType switch {
+                                            "pdf"  => "bg-danger",
+                                            "docx" => "bg-primary",
+                                            "pptx" => "bg-warning text-dark",
+                                            _      => "bg-secondary"
+                                        };
+                                    }
+                                    <span class="badge @ftClass rounded-pill">@doc.FileType.ToUpper()</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        <i class="bi bi-layers me-1"></i>@doc.ChunkCount
+                                    </span>
+                                </td>
+                                <td>
+                                    @{
+                                        var (sc, si, st) = doc.IndexStatus switch {
+                                            "Indexed"    => ("success", "check-circle-fill", "Indexed"),
+                                            "Processing" => ("info",    "hourglass-split",   "Processing"),
+                                            "Failed"     => ("danger",  "x-circle-fill",     "Failed"),
+                                            _            => ("warning", "clock",              "Pending")
+                                        };
+                                    }
+                                    <span class="badge bg-@sc-subtle text-@sc border border-@sc-subtle rounded-pill">
+                                        <i class="bi bi-@si me-1"></i>@st
+                                    </span>
+                                </td>
+                                <td class="text-muted small">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Detail" asp-route-id="@doc.DocumentID"
+                                           class="btn btn-outline-primary" title="Xem chi tiết">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </a>
+                                        @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                                        {
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="confirmDelete(@doc.DocumentID, '@doc.Title')"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            @if (Model.TotalPages > 1)
+            {
+                <div class="d-flex justify-content-center py-3">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            @if (Model.CurrentPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@(Model.CurrentPage - 1)"
+                                       asp-route-keyword="@Model.Keyword"
+                                       asp-route-subjectId="@Model.SelectedSubjectId"
+                                       asp-route-chapterId="@Model.SelectedChapterId">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                            }
+                            @for (int p = 1; p <= Model.TotalPages; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@p"
+                                       asp-route-keyword="@Model.Keyword"
+                                       asp-route-subjectId="@Model.SelectedSubjectId"
+                                       asp-route-chapterId="@Model.SelectedChapterId">@p</a>
+                                </li>
+                            }
+                            @if (Model.CurrentPage < Model.TotalPages)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" asp-action="Index"
+                                       asp-route-page="@(Model.CurrentPage + 1)"
+                                       asp-route-keyword="@Model.Keyword"
+                                       asp-route-subjectId="@Model.SelectedSubjectId"
+                                       asp-route-chapterId="@Model.SelectedChapterId">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <p>Bạn có chắc muốn xóa tài liệu:</p>
+                <p class="fw-bold text-danger" id="deleteDocTitle"></p>
+                <p class="text-muted small">Thao tác này không thể hoàn tác. Tất cả chunks và embeddings sẽ bị xóa.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="deleteForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash-fill me-1"></i>Xóa tài liệu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function confirmDelete(id, title) {
+        document.getElementById('deleteDocTitle').textContent = title;
+        document.getElementById('deleteForm').action = '/Document/Delete/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    function loadChapters(subjectId) {
+        const select = document.getElementById('filterChapter');
+        select.innerHTML = '<option value="">— Đang tải... —</option>';
+        if (!subjectId) {
+            select.innerHTML = '<option value="">— Tất cả chương —</option>';
+            return;
+        }
+        fetch('/Document/GetChapters?subjectId=' + subjectId)
+            .then(r => r.json())
+            .then(data => {
+                select.innerHTML = '<option value="">— Tất cả chương —</option>';
+                data.forEach(c => {
+                    select.innerHTML += `<option value="${c.chapterID}">Chương ${c.chapterNumber}: ${c.chapterName}</option>`;
+                });
+            });
+    }
+</script>
+}

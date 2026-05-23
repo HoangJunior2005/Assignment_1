@@ -1,0 +1,151 @@
+@{
+    Layout = null; // No layout for login page
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Đăng nhập — LDS System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="~/css/site.css"/>
+</head>
+<body class="auth-body">
+
+<div class="auth-container">
+    <!-- Left Panel - Branding -->
+    <div class="auth-left">
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <h1 class="auth-title">LDS System</h1>
+            <p class="auth-subtitle">Learning Document System</p>
+            <p class="auth-desc">Hệ thống quản lý tài liệu học tập tích hợp AI/RAG. Upload, phân tích và tìm kiếm tài liệu thông minh.</p>
+        </div>
+        <div class="auth-features">
+            <div class="feature-item"><i class="bi bi-cloud-upload-fill"></i> Upload PDF, DOCX, PPTX</div>
+            <div class="feature-item"><i class="bi bi-cpu-fill"></i> Auto Chunking & Embedding</div>
+            <div class="feature-item"><i class="bi bi-shield-check-fill"></i> RBAC Phân quyền</div>
+            <div class="feature-item"><i class="bi bi-search"></i> AI Search Ready</div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Login Form -->
+    <div class="auth-right">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>Đăng nhập</h2>
+                <p>Chào mừng trở lại! Vui lòng đăng nhập để tiếp tục.</p>
+            </div>
+
+            <form asp-action="Login" method="post" id="loginForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]"/>
+
+                <div asp-validation-summary="All" class="alert alert-danger" style="display:none"></div>
+
+                @{
+                    var summaryErrors = ViewData.ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList();
+                }
+                @if (summaryErrors.Any())
+                {
+                    <div class="alert alert-danger d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span>@summaryErrors.First()</span>
+                    </div>
+                }
+
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" for="Username">
+                        <i class="bi bi-person-fill me-1"></i> Tên đăng nhập
+                    </label>
+                    <input type="text" id="Username" name="Username"
+                           class="form-control form-control-custom"
+                           placeholder="Nhập tên đăng nhập..."
+                           value="@(ViewContext.HttpContext.Request.HasFormContentType
+                               ? ViewContext.HttpContext.Request.Form["Username"].ToString()
+                               : "")"
+                           autocomplete="username" required/>
+                </div>
+
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" for="Password">
+                        <i class="bi bi-lock-fill me-1"></i> Mật khẩu
+                    </label>
+                    <div class="input-password-wrap">
+                        <input type="password" id="Password" name="Password"
+                               class="form-control form-control-custom"
+                               placeholder="Nhập mật khẩu..."
+                               autocomplete="current-password" required/>
+                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword()">
+                            <i class="bi bi-eye" id="pwdIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="RememberMe" name="RememberMe" value="true"/>
+                        <label class="form-check-label" for="RememberMe">Ghi nhớ đăng nhập</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-login" id="btnLogin">
+                    <span class="btn-text"><i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span> Đang xử lý...
+                    </span>
+                </button>
+            </form>
+
+            <!-- Demo Credentials -->
+            <div class="demo-credentials mt-4">
+                <p class="demo-title"><i class="bi bi-info-circle me-1"></i> Tài khoản demo:</p>
+                <div class="demo-accounts">
+                    <span class="demo-acc" onclick="fillLogin('admin','Admin@123')">
+                        <i class="bi bi-shield-fill-check text-warning"></i> admin / Admin@123
+                    </span>
+                    <span class="demo-acc" onclick="fillLogin('nguyenvan_gv','Teacher@123')">
+                        <i class="bi bi-person-video3 text-primary"></i> nguyenvan_gv / Teacher@123
+                    </span>
+                    <span class="demo-acc" onclick="fillLogin('tranmanh_sv','Student@123')">
+                        <i class="bi bi-person-fill text-success"></i> tranmanh_sv / Student@123
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function togglePassword() {
+        const pwd = document.getElementById('Password');
+        const icon = document.getElementById('pwdIcon');
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            pwd.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+
+    function fillLogin(user, pass) {
+        document.getElementById('Username').value = user;
+        document.getElementById('Password').value = pass;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function () {
+        document.querySelector('.btn-text').classList.add('d-none');
+        document.querySelector('.btn-loading').classList.remove('d-none');
+    });
+</script>
+</body>
+</html>
