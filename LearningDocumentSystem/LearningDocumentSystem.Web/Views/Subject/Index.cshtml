@@ -8,7 +8,7 @@
         <h1 class="page-title"><i class="bi bi-journal-bookmark-fill me-2"></i>Môn học</h1>
         <p class="page-subtitle">Quản lý các môn học trong hệ thống</p>
     </div>
-    @if (User.IsInRole("Admin"))
+    @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
     {
         <a asp-action="Create" class="btn btn-primary btn-action">
             <i class="bi bi-plus-circle me-2"></i>Thêm môn học
@@ -36,7 +36,7 @@
                             <th>Mã học phần</th>
                             <th>Số chương</th>
                             <th>Ngày tạo</th>
-                            @if (User.IsInRole("Admin")) { <th class="text-end">Thao tác</th> }
+                            @if (User.IsInRole("Admin") || User.IsInRole("Teacher")) { <th class="text-end">Thao tác</th> }
                         </tr>
                     </thead>
                     <tbody>
@@ -62,7 +62,7 @@
                                     </span>
                                 </td>
                                 <td class="text-muted small">@s.CreatedAt.ToString("dd/MM/yyyy")</td>
-                                @if (User.IsInRole("Admin"))
+                                @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
                                 {
                                     <td class="text-end">
                                         <div class="btn-group btn-group-sm">
