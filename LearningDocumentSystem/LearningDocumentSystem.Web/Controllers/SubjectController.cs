@@ -25,12 +25,12 @@ namespace LearningDocumentSystem.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "TeacherUp")]
         public IActionResult Create() => View(new SubjectFormViewModel());
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Create(SubjectFormViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -52,7 +52,7 @@ namespace LearningDocumentSystem.Web.Controllers
         }
 
         [HttpGet]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Edit(int id)
         {
             var s = await _subjectService.GetByIdAsync(id);
@@ -67,7 +67,7 @@ namespace LearningDocumentSystem.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Edit(SubjectFormViewModel model)
         {
             if (!ModelState.IsValid) return View(model);
@@ -91,7 +91,7 @@ namespace LearningDocumentSystem.Web.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Policy = "AdminOnly")]
+        [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Delete(int id)
         {
             try
