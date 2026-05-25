@@ -2,8 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LearningDocumentSystem.Data\LearningDocumentSystem.Data.csproj" />
-    <ProjectReference Include="..\LearningDocumentSystem.Common\LearningDocumentSystem.Common.csproj" />
-    <ProjectReference Include="..\LearningDocumentSystem.Entities\LearningDocumentSystem.Entities.csproj" />
   </ItemGroup>
 
   <ItemGroup>

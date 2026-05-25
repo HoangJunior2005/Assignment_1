@@ -1,9 +1,6 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\LearningDocumentSystem.Entities\LearningDocumentSystem.Entities.csproj" />
-    <ProjectReference Include="..\LearningDocumentSystem.Common\LearningDocumentSystem.Common.csproj" />
-  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
