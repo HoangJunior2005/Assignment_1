@@ -18,6 +18,11 @@ namespace LearningDocumentSystem.Web.Controllers
 
         public async Task<IActionResult> Index()
         {
+            if (!User.IsInRole("Admin") && !User.IsInRole("Teacher"))
+            {
+                return RedirectToAction("Index", "Document");
+            }
+
             try
             {
                 var dashboard = await _documentService.GetDashboardAsync();

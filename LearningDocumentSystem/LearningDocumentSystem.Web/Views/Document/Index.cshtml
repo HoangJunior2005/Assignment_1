@@ -162,6 +162,10 @@
                                            class="btn btn-outline-primary" title="Xem chi tiết">
                                             <i class="bi bi-eye-fill"></i>
                                         </a>
+                                        <a asp-action="Download" asp-route-id="@doc.DocumentID"
+                                           class="btn btn-outline-success" title="Tải xuống">
+                                            <i class="bi bi-cloud-download-fill"></i>
+                                        </a>
                                         @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
                                         {
                                             <button type="button" class="btn btn-outline-danger"

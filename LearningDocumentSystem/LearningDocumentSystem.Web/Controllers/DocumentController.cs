@@ -3,7 +3,9 @@ using LearningDocumentSystem.Business.Services.Interfaces;
 using LearningDocumentSystem.Common.Constants;
 using LearningDocumentSystem.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using System.IO;
 using System.Security.Claims;
 
 namespace LearningDocumentSystem.Web.Controllers
@@ -14,17 +16,20 @@ namespace LearningDocumentSystem.Web.Controllers
         private readonly IDocumentService _documentService;
         private readonly ISubjectService  _subjectService;
         private readonly IChapterService  _chapterService;
+        private readonly IWebHostEnvironment _env;
         private readonly ILogger<DocumentController> _logger;
 
         public DocumentController(
             IDocumentService documentService,
             ISubjectService subjectService,
             IChapterService chapterService,
+            IWebHostEnvironment env,
             ILogger<DocumentController> logger)
         {
             _documentService = documentService;
             _subjectService  = subjectService;
             _chapterService  = chapterService;
+            _env             = env;
             _logger          = logger;
         }
 
@@ -123,6 +128,37 @@ namespace LearningDocumentSystem.Web.Controllers
             }
             return View(doc);
         }
+
+        // GET: /Document/Download/5
+        [HttpGet]
+        public async Task<IActionResult> Download(int id)
+        {
+            var doc = await _documentService.GetDetailAsync(id);
+            if (doc == null)
+            {
+                TempData["Error"] = AppMessages.MsgNotFound;
+                return RedirectToAction("Index");
+            }
+
+            var filePath = Path.Combine(_env.WebRootPath, AppConstants.UploadFolder, doc.StoragePath);
+            if (!System.IO.File.Exists(filePath))
+            {
+                TempData["Error"] = "File vật lý không tồn tại trên hệ thống.";
+                return RedirectToAction("Detail", new { id = id });
+            }
+
+            var contentType = doc.FileType.ToLowerInvariant() switch
+            {
+                "pdf"  => "application/pdf",
+                "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                _      => "application/octet-stream"
+            };
+
+            var downloadName = $"{doc.Title}.{doc.FileType}";
+            return PhysicalFile(filePath, contentType, downloadName);
+        }
+
 
         // POST: /Document/Delete/5
         [HttpPost]

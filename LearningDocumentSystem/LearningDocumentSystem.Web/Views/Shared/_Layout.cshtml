@@ -50,12 +50,15 @@
 
             <!-- Navigation -->
             <ul class="sidebar-menu">
-                <li class="menu-section">Tổng quan</li>
-                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
-                    <a asp-controller="Home" asp-action="Index">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                </li>
+                @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
+                {
+                    <li class="menu-section">Tổng quan</li>
+                    <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                        <a asp-controller="Home" asp-action="Index">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                }
 
                 <li class="menu-section">Quản lý nội dung</li>
                 <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Subject" ? "active" : "")">
