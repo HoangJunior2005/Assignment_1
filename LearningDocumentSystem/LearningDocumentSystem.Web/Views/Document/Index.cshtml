@@ -110,18 +110,18 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-hover table-clean mb-0 align-middle" id="docTable">
+                <table class="table table-hover table-clean mb-0 align-middle doc-table" id="docTable">
                     <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em;">
                         <tr>
-                            <th>#</th>
+                            <th class="text-center col-index">#</th>
                             <th>Tài liệu</th>
                             <th>Môn học / Chương</th>
-                            <th>Loại</th>
-                            <th>Chunks</th>
-                            <th>Trạng thái</th>
-                            <th>Index</th>
-                            <th>Upload</th>
-                            <th class="text-end">Thao tác</th>
+                            <th class="text-center col-type">Loại</th>
+                            <th class="text-center col-chunks">Chunks</th>
+                            <th class="text-center col-status">Trạng thái</th>
+                            <th class="text-center col-date">Index</th>
+                            <th class="text-center col-date">Upload</th>
+                            <th class="text-end col-actions">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -129,9 +129,9 @@
                         @foreach (var doc in Model.Documents)
                         {
                             <tr>
-                                <td class="text-muted small">@(row++)</td>
+                                <td class="text-muted small text-center">@(row++)</td>
                                 <td>
-                                    <a asp-action="Detail" asp-route-id="@doc.DocumentID" class="doc-link fw-semibold">
+                                    <a asp-action="Detail" asp-route-id="@doc.DocumentID" class="doc-link fw-semibold doc-title">
                                         @doc.Title
                                     </a>
                                     <div class="doc-meta">@doc.UploadedByName</div>
@@ -140,7 +140,7 @@
                                     <div class="small fw-semibold">@doc.SubjectName</div>
                                     <div class="doc-meta">Ch.@doc.ChapterNumber: @doc.ChapterName</div>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     @{
                                         var ftClass = doc.FileType switch {
                                             "pdf"  => "bg-danger",
@@ -151,12 +151,12 @@
                                     }
                                     <span class="badge @ftClass rounded-pill">@doc.FileType.ToUpper()</span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <span class="badge bg-secondary-subtle text-secondary border">
                                         <i class="bi bi-layers me-1"></i>@doc.ChunkCount
                                     </span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     @{
                                         var (sc, si, st) = doc.IndexStatus switch {
                                             "Indexed"    => ("success", "check-circle-fill", "Indexed"),
@@ -169,11 +169,11 @@
                                         <i class="bi bi-@si me-1"></i>@st
                                     </span>
                                 </td>
-                                <td class="text-muted small">
+                                <td class="text-muted small text-center text-nowrap">
                                     @(doc.IndexedAt.HasValue ? doc.IndexedAt.Value.ToString("dd/MM/yyyy HH:mm") : "—")
                                 </td>
-                                <td class="text-muted small">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
-                                <td class="text-end">
+                                <td class="text-muted small text-center text-nowrap">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
+                                <td class="text-end doc-actions">
                                     <div class="btn-group btn-group-sm">
                                         <a asp-action="Detail" asp-route-id="@doc.DocumentID"
                                            class="btn btn-outline-primary" title="Xem chi tiết">
