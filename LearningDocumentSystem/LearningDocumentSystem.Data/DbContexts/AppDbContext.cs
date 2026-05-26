@@ -120,6 +120,7 @@ namespace LearningDocumentSystem.Data.DbContexts
                 entity.Property(d => d.FileSizeInBytes).IsRequired();
                 entity.Property(d => d.IndexStatus).HasMaxLength(20).HasDefaultValue("Pending");
                 entity.Property(d => d.UploadedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(d => d.IndexedAt).HasColumnType("datetime2");
 
                 // FK → Chapters (CASCADE)
                 entity.HasOne(d => d.Chapter)

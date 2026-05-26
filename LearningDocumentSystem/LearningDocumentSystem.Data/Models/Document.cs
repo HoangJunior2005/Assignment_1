@@ -37,6 +37,8 @@ namespace LearningDocumentSystem.Entities.Models
 
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime? IndexedAt { get; set; }
+
         // Navigation properties
         public virtual Chapter Chapter { get; set; } = null!;
         public virtual User UploadedByUser { get; set; } = null!;

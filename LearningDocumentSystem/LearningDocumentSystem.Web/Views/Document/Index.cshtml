@@ -1,4 +1,5 @@
 @model LearningDocumentSystem.Web.ViewModels.DocumentListViewModel
+@using LearningDocumentSystem.Common.Constants
 @{
     ViewData["Title"] = "Danh sách tài liệu";
 }
@@ -20,16 +21,16 @@
 <div class="card-custom mb-4">
     <div class="card-custom-body">
         <form method="get" id="searchForm">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label small fw-semibold">
+            <div class="row g-2 align-items-end">
+                <div class="col-xl col-lg-3 col-md-6">
+                    <label class="form-label small fw-semibold text-muted">
                         <i class="bi bi-search me-1"></i>Tìm kiếm
                     </label>
                     <input type="text" name="keyword" value="@Model.Keyword"
                            class="form-control" placeholder="Tên tài liệu..."/>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">
+                <div class="col-xl col-lg-3 col-md-6">
+                    <label class="form-label small fw-semibold text-muted">
                         <i class="bi bi-journal-bookmark me-1"></i>Môn học
                     </label>
                     <select name="subjectId" class="form-select" id="filterSubject" onchange="loadChapters(this.value)">
@@ -42,8 +43,8 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label small fw-semibold">
+                <div class="col-xl col-lg-2 col-md-4">
+                    <label class="form-label small fw-semibold text-muted">
                         <i class="bi bi-collection me-1"></i>Chương
                     </label>
                     <select name="chapterId" class="form-select" id="filterChapter">
@@ -56,8 +57,20 @@
                         }
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
+                <div class="col-xl col-lg-2 col-md-4">
+                    <label class="form-label small fw-semibold text-muted">
+                        <i class="bi bi-activity me-1"></i>Trạng thái
+                    </label>
+                    <select name="status" class="form-select">
+                        <option value="" selected="@(string.IsNullOrWhiteSpace(Model.SelectedStatus) ? "selected" : null)">— Tất cả trạng thái —</option>
+                        <option value="@AppConstants.StatusPending" selected="@(Model.SelectedStatus == AppConstants.StatusPending ? "selected" : null)">Chờ xử lý</option>
+                        <option value="@AppConstants.StatusProcessing" selected="@(Model.SelectedStatus == AppConstants.StatusProcessing ? "selected" : null)">Đang xử lý</option>
+                        <option value="@AppConstants.StatusIndexed" selected="@(Model.SelectedStatus == AppConstants.StatusIndexed ? "selected" : null)">Đã index</option>
+                        <option value="@AppConstants.StatusFailed" selected="@(Model.SelectedStatus == AppConstants.StatusFailed ? "selected" : null)">Lỗi</option>
+                    </select>
+                </div>
+                <div class="col-xl-auto col-lg-2 col-md-4">
+                    <button type="submit" class="btn btn-primary w-100 px-4">
                         <i class="bi bi-funnel-fill me-1"></i>Lọc
                     </button>
                 </div>
@@ -97,8 +110,8 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-hover table-clean mb-0" id="docTable">
-                    <thead>
+                <table class="table table-hover table-clean mb-0 align-middle" id="docTable">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em;">
                         <tr>
                             <th>#</th>
                             <th>Tài liệu</th>
@@ -106,6 +119,7 @@
                             <th>Loại</th>
                             <th>Chunks</th>
                             <th>Trạng thái</th>
+                            <th>Index</th>
                             <th>Upload</th>
                             <th class="text-end">Thao tác</th>
                         </tr>
@@ -155,6 +169,9 @@
                                         <i class="bi bi-@si me-1"></i>@st
                                     </span>
                                 </td>
+                                <td class="text-muted small">
+                                    @(doc.IndexedAt.HasValue ? doc.IndexedAt.Value.ToString("dd/MM/yyyy HH:mm") : "—")
+                                </td>
                                 <td class="text-muted small">@doc.UploadedAt.ToString("dd/MM/yyyy")</td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm">
@@ -195,7 +212,8 @@
                                        asp-route-page="@(Model.CurrentPage - 1)"
                                        asp-route-keyword="@Model.Keyword"
                                        asp-route-subjectId="@Model.SelectedSubjectId"
-                                       asp-route-chapterId="@Model.SelectedChapterId">
+                                       asp-route-chapterId="@Model.SelectedChapterId"
+                                       asp-route-status="@Model.SelectedStatus">
                                         <i class="bi bi-chevron-left"></i>
                                     </a>
                                 </li>
@@ -207,7 +225,8 @@
                                        asp-route-page="@p"
                                        asp-route-keyword="@Model.Keyword"
                                        asp-route-subjectId="@Model.SelectedSubjectId"
-                                       asp-route-chapterId="@Model.SelectedChapterId">@p</a>
+                                       asp-route-chapterId="@Model.SelectedChapterId"
+                                       asp-route-status="@Model.SelectedStatus">@p</a>
                                 </li>
                             }
                             @if (Model.CurrentPage < Model.TotalPages)
@@ -217,7 +236,8 @@
                                        asp-route-page="@(Model.CurrentPage + 1)"
                                        asp-route-keyword="@Model.Keyword"
                                        asp-route-subjectId="@Model.SelectedSubjectId"
-                                       asp-route-chapterId="@Model.SelectedChapterId">
+                                       asp-route-chapterId="@Model.SelectedChapterId"
+                                       asp-route-status="@Model.SelectedStatus">
                                         <i class="bi bi-chevron-right"></i>
                                     </a>
                                 </li>

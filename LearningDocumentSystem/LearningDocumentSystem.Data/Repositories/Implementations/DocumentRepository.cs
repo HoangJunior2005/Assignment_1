@@ -1,3 +1,4 @@
+using System;
 using LearningDocumentSystem.Data.DbContexts;
 using LearningDocumentSystem.Data.Repositories.Interfaces;
 using LearningDocumentSystem.Entities.Models;
@@ -83,11 +84,12 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
         }
 
         public async Task<(IEnumerable<Document> Items, int TotalCount)> GetPagedAsync(
-            string? keyword, int? subjectId, int? chapterId, int page, int pageSize)
+            string? keyword, int? subjectId, int? chapterId, string? status, int page, int pageSize)
         {
             var query = _context.Documents
                 .Include(d => d.Chapter).ThenInclude(c => c.Subject)
                 .Include(d => d.UploadedByUser)
+                .Include(d => d.Chunks)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -96,6 +98,8 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
                 query = query.Where(d => d.Chapter.SubjectID == subjectId);
             if (chapterId.HasValue)
                 query = query.Where(d => d.ChapterID == chapterId);
+            if (!string.IsNullOrWhiteSpace(status))
+                query = query.Where(d => d.IndexStatus == status);
 
             var total = await query.CountAsync();
             var items = await query
@@ -116,6 +120,9 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
             if (doc != null)
             {
                 doc.IndexStatus = status;
+                doc.IndexedAt = string.Equals(status, "Indexed", StringComparison.OrdinalIgnoreCase)
+                    ? DateTime.UtcNow
+                    : null;
                 _context.Documents.Update(doc);
             }
         }
