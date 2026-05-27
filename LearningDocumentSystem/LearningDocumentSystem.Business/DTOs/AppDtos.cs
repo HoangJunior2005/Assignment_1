@@ -128,6 +128,21 @@ namespace LearningDocumentSystem.Business.DTOs
         public bool HasEmbedding { get; set; }
     }
 
+    public class ChatResponseDto
+    {
+        public string Answer { get; set; } = string.Empty;
+        public List<ChatSourceDto> Sources { get; set; } = new();
+    }
+
+    public class ChatSourceDto
+    {
+        public int DocumentID { get; set; }
+        public string DocumentTitle { get; set; } = string.Empty;
+        public int? PageNumber { get; set; }
+        public float SimilarityScore { get; set; }
+        public string ContentSnippet { get; set; } = string.Empty;
+    }
+
     public class DashboardDto
     {
         public int TotalDocuments { get; set; }

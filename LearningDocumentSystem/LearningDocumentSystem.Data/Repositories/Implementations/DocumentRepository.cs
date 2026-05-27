@@ -142,6 +142,23 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
                 .ToListAsync();
             _context.DocumentChunks.RemoveRange(chunks);
         }
+
+        public async Task<IEnumerable<DocumentChunk>> GetChunksForRAGAsync(int? subjectId, int? chapterId)
+        {
+            var query = _context.DocumentChunks
+                .Include(c => c.Embedding)
+                .Include(c => c.Document).ThenInclude(d => d.Chapter)
+                .Where(c => c.Document.IndexStatus == "Indexed")
+                .AsQueryable();
+
+            if (subjectId.HasValue)
+                query = query.Where(c => c.Document.Chapter.SubjectID == subjectId.Value);
+
+            if (chapterId.HasValue)
+                query = query.Where(c => c.Document.ChapterID == chapterId.Value);
+
+            return await query.ToListAsync();
+        }
     }
 
     public class EmbeddingRepository : GenericRepository<Embedding>, IEmbeddingRepository

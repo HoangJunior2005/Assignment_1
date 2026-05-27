@@ -54,4 +54,9 @@ namespace LearningDocumentSystem.Business.Services.Interfaces
     {
         Task<string> GenerateFakeEmbeddingAsync(string text);
     }
+
+    public interface IChatService
+    {
+        Task<ChatResponseDto> AskQuestionAsync(string question, int? subjectId = null, int? chapterId = null);
+    }
 }

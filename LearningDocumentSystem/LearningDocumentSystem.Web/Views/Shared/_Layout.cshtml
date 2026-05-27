@@ -77,6 +77,13 @@
                     </a>
                 </li>
 
+                <li class="menu-section">Trợ lý AI</li>
+                <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")">
+                    <a asp-controller="Chat" asp-action="Index">
+                        <i class="bi bi-robot"></i> Hỏi đáp AI
+                    </a>
+                </li>
+
                 @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
                 {
                     <li class="menu-section">Thao tác</li>
