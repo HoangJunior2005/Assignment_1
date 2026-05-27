@@ -1,12 +1,31 @@
 @model LearningDocumentSystem.Web.ViewModels.DocumentUploadViewModel
+@using LearningDocumentSystem.Common.Constants
+@using System.Linq
 @{
     ViewData["Title"] = "Upload tài liệu";
+
+    var allowedFileTypes = (ViewBag.AllowedFileTypes as string[] ?? AppConstants.AllowedFileTypes)
+        .Select(type => type.Trim().TrimStart('.').ToLowerInvariant())
+        .Where(type => !string.IsNullOrWhiteSpace(type))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    var maxFileSizeBytes = ViewBag.MaxFileSizeBytes is long maxBytes
+        ? maxBytes
+        : AppConstants.MaxFileSizeBytes;
+
+    var maxFileSizeMb = ViewBag.MaxFileSizeMB is long maxMb
+        ? maxMb
+        : Math.Max(1L, (long)Math.Ceiling(maxFileSizeBytes / (1024d * 1024d)));
+
+    var acceptExtensions = string.Join(",", allowedFileTypes.Select(type => $".{type}"));
+    var allowedTypeLabel = string.Join(", ", allowedFileTypes.Select(type => type.ToUpperInvariant()));
 }
 
 <div class="page-header">
     <div>
         <h1 class="page-title"><i class="bi bi-cloud-upload-fill me-2"></i>Upload tài liệu</h1>
-        <p class="page-subtitle">Upload PDF, DOCX, PPTX — tự động chunking & embedding</p>
+        <p class="page-subtitle">Chọn @allowedTypeLabel và gắn tài liệu với môn học/chương trước khi xử lý.</p>
     </div>
 </div>
 
@@ -20,92 +39,85 @@
                 <form asp-action="Upload" method="post" enctype="multipart/form-data" id="uploadForm">
                     @Html.AntiForgeryToken()
 
-                    <div asp-validation-summary="ModelOnly" class="alert alert-danger d-none" id="validSummary"></div>
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-                    <!-- Title -->
                     <div class="mb-4">
                         <label asp-for="Title" class="form-label fw-semibold">
-                            <i class="bi bi-type me-1"></i> @Html.DisplayNameFor(m => m.Title)
+                            <i class="bi bi-type me-1"></i>Tiêu đề tài liệu
                         </label>
                         <input asp-for="Title" class="form-control form-control-lg"
-                               placeholder="Nhập tiêu đề tài liệu..." id="docTitle"/>
+                               placeholder="Nhập tiêu đề tài liệu..." id="docTitle" />
                         <span asp-validation-for="Title" class="text-danger small"></span>
                     </div>
 
-                    <!-- Subject + Chapter -->
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">
-                                <i class="bi bi-journal-bookmark me-1"></i> Môn học
+                            <label asp-for="SelectedSubjectId" class="form-label fw-semibold">
+                                <i class="bi bi-journal-bookmark me-1"></i>Môn học
                             </label>
                             <select asp-for="SelectedSubjectId" class="form-select" id="subjectSelect" onchange="loadUploadChapters(this.value)">
-                                <option value="">— Chọn môn học —</option>
-                                @foreach (var s in Model.Subjects)
+                                <option value="">-- Chọn môn học --</option>
+                                @foreach (var subject in Model.Subjects)
                                 {
-                                    <option value="@s.SubjectID"
-                                            selected="@(Model.SelectedSubjectId == s.SubjectID)">
-                                        [@s.SubjectCode] @s.SubjectName
-                                    </option>
+                                    <option value="@subject.SubjectID">[@subject.SubjectCode] @subject.SubjectName</option>
                                 }
                             </select>
+                            <span asp-validation-for="SelectedSubjectId" class="text-danger small"></span>
                         </div>
+
                         <div class="col-md-6">
                             <label asp-for="ChapterId" class="form-label fw-semibold">
-                                <i class="bi bi-collection me-1"></i> Chương
+                                <i class="bi bi-collection me-1"></i>Chương
                             </label>
                             <select asp-for="ChapterId" class="form-select" id="chapterSelect">
-                                <option value="">— Chọn chương —</option>
-                                @foreach (var c in Model.Chapters)
+                                <option value="">-- Chọn chương --</option>
+                                @foreach (var chapter in Model.Chapters)
                                 {
-                                    <option value="@c.ChapterID">
-                                        Chương @c.ChapterNumber: @c.ChapterName
-                                    </option>
+                                    <option value="@chapter.ChapterID">Chương @chapter.ChapterNumber: @chapter.ChapterName</option>
                                 }
                             </select>
                             <span asp-validation-for="ChapterId" class="text-danger small"></span>
                         </div>
                     </div>
 
-                    <!-- Drag & Drop Upload Zone -->
                     <div class="mb-4">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-paperclip me-1"></i> File tài liệu
+                        <label asp-for="File" class="form-label fw-semibold">
+                            <i class="bi bi-paperclip me-1"></i>File tài liệu
                         </label>
-                        <div class="upload-zone" id="uploadZone">
+                        <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-label="Khu vực chọn file">
                             <div class="upload-zone-inner" id="uploadZoneContent">
                                 <div class="upload-icon">
                                     <i class="bi bi-cloud-upload"></i>
                                 </div>
                                 <p class="upload-text">Kéo thả file vào đây hoặc</p>
                                 <label for="fileInput" class="btn btn-outline-primary">
-                                    <i class="bi bi-folder2-open me-1"></i> Chọn file
+                                    <i class="bi bi-folder2-open me-1"></i>Chọn file
                                 </label>
                                 <input type="file" asp-for="File" id="fileInput"
-                                       accept=".pdf,.docx,.pptx" class="d-none"
-                                       onchange="handleFileSelect(this)"/>
-                                <p class="upload-hint">PDF, DOCX, PPTX — tối đa 50MB</p>
+                                       accept="@acceptExtensions" class="d-none"
+                                       onchange="handleFileSelect(this)" />
+                                <p class="upload-hint">Hỗ trợ @allowedTypeLabel. Kích thước tối đa @maxFileSizeMb MB.</p>
                             </div>
 
-                            <!-- File Preview (ẩn, hiện khi chọn file) -->
                             <div class="file-preview d-none" id="filePreview">
                                 <div class="file-preview-icon" id="filePreviewIcon"></div>
                                 <div class="file-preview-info">
                                     <div class="file-preview-name" id="filePreviewName"></div>
                                     <div class="file-preview-size" id="filePreviewSize"></div>
                                 </div>
-                                <button type="button" class="btn-remove-file" onclick="removeFile()">
+                                <button type="button" class="btn-remove-file" onclick="removeFile()" aria-label="Xóa file đã chọn">
                                     <i class="bi bi-x-circle-fill"></i>
                                 </button>
                             </div>
                         </div>
                         <span asp-validation-for="File" class="text-danger small"></span>
+                        <div class="text-danger small mt-1 d-none" id="clientFileError" aria-live="polite"></div>
                     </div>
 
-                    <!-- Submit -->
                     <div class="d-flex gap-3">
                         <button type="submit" class="btn btn-primary btn-lg" id="btnUpload">
                             <span class="btn-text">
-                                <i class="bi bi-cpu-fill me-2"></i>Upload & Xử lý AI
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i>Upload tài liệu
                             </span>
                             <span class="btn-loading d-none">
                                 <span class="spinner-border spinner-border-sm me-2"></span>
@@ -119,47 +131,39 @@
         </div>
     </div>
 
-    <!-- Sidebar Info -->
     <div class="col-lg-4">
         <div class="card-custom mb-4">
             <div class="card-custom-header">
-                <h6><i class="bi bi-info-circle me-2"></i>Quy trình xử lý</h6>
+                <h6><i class="bi bi-list-check me-2"></i>Yêu cầu upload</h6>
             </div>
             <div class="card-custom-body">
                 <div class="process-steps">
                     <div class="process-step active">
                         <div class="step-num">1</div>
                         <div class="step-info">
-                            <div class="step-title">Upload file</div>
-                            <div class="step-desc">Lưu vào /wwwroot/uploads</div>
+                            <div class="step-title">Chọn môn/chương</div>
+                            <div class="step-desc">Metadata được lưu cùng tài liệu</div>
                         </div>
                     </div>
-                    <div class="process-step">
+                    <div class="process-step active">
                         <div class="step-num">2</div>
                         <div class="step-info">
-                            <div class="step-title">Đọc nội dung</div>
-                            <div class="step-desc">Parse PDF/DOCX/PPTX</div>
+                            <div class="step-title">Kiểm tra file</div>
+                            <div class="step-desc">@allowedTypeLabel và tối đa @maxFileSizeMb MB</div>
                         </div>
                     </div>
                     <div class="process-step">
                         <div class="step-num">3</div>
                         <div class="step-info">
-                            <div class="step-title">Chunking</div>
-                            <div class="step-desc">Tách thành đoạn ~800 ký tự</div>
+                            <div class="step-title">Lưu vào hệ thống</div>
+                            <div class="step-desc">File nằm trong thư mục upload cấu hình</div>
                         </div>
                     </div>
                     <div class="process-step">
                         <div class="step-num">4</div>
                         <div class="step-info">
-                            <div class="step-title">Embedding</div>
-                            <div class="step-desc">Sinh vector 1536 chiều</div>
-                        </div>
-                    </div>
-                    <div class="process-step">
-                        <div class="step-num">5</div>
-                        <div class="step-info">
-                            <div class="step-title">Lưu DB</div>
-                            <div class="step-desc">Sẵn sàng AI Search / RAG</div>
+                            <div class="step-title">Tự động xử lý</div>
+                            <div class="step-desc">Chunking và embedding chạy sau upload</div>
                         </div>
                     </div>
                 </div>
@@ -171,97 +175,203 @@
                 <h6><i class="bi bi-shield-check me-2"></i>Định dạng hỗ trợ</h6>
             </div>
             <div class="card-custom-body">
-                <div class="file-type-badge mb-2">
-                    <i class="bi bi-file-earmark-pdf-fill text-danger fs-5 me-2"></i>
-                    <span><strong>PDF</strong> — Tài liệu portable</span>
-                </div>
-                <div class="file-type-badge mb-2">
-                    <i class="bi bi-file-earmark-word-fill text-primary fs-5 me-2"></i>
-                    <span><strong>DOCX</strong> — Microsoft Word</span>
-                </div>
-                <div class="file-type-badge">
-                    <i class="bi bi-file-earmark-ppt-fill text-warning fs-5 me-2"></i>
-                    <span><strong>PPTX</strong> — PowerPoint</span>
-                </div>
-                <hr class="my-3"/>
-                <div class="text-muted small">
-                    <i class="bi bi-hdd me-1"></i> Kích thước tối đa: <strong>50 MB</strong>
-                </div>
+                @for (var i = 0; i < allowedFileTypes.Length; i++)
+                {
+                    var fileType = allowedFileTypes[i];
+                    var iconClass = fileType switch
+                    {
+                        "pdf" => "bi-file-earmark-pdf-fill text-danger",
+                        "docx" => "bi-file-earmark-word-fill text-primary",
+                        "pptx" => "bi-file-earmark-ppt-fill text-warning",
+                        _ => "bi-file-earmark-fill text-secondary"
+                    };
+                    var description = fileType switch
+                    {
+                        "pdf" => "tài liệu portable",
+                        "docx" => "Microsoft Word",
+                        "pptx" => "PowerPoint/slide bài giảng",
+                        _ => "tài liệu học tập"
+                    };
+                    var spacingClass = i < allowedFileTypes.Length - 1 ? "mb-2" : string.Empty;
+
+                    <div class="file-type-badge @spacingClass">
+                        <i class="bi @iconClass fs-5 me-2"></i>
+                        <span><strong>@fileType.ToUpperInvariant()</strong> - @description</span>
+                    </div>
+                }
             </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
-<script>
-    // Drag & Drop
-    const zone = document.getElementById('uploadZone');
-    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-    zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-    zone.addEventListener('drop', e => {
-        e.preventDefault();
-        zone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file) {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+    <script>
+        const zone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const clientFileError = document.getElementById('clientFileError');
+        const chapterSelect = document.getElementById('chapterSelect');
+        const uploadButton = document.getElementById('btnUpload');
+        const allowedExtensions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(allowedFileTypes));
+        const maxFileSizeBytes = @maxFileSizeBytes;
+        const maxFileSizeMb = @maxFileSizeMb;
+
+        zone.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('label[for="fileInput"]')) {
+                return;
+            }
+            fileInput.click();
+        });
+
+        zone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInput.click();
+            }
+        });
+
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.add('drag-over');
+        });
+
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (!file || !validateFile(file)) return;
+
             const dt = new DataTransfer();
             dt.items.add(file);
-            document.getElementById('fileInput').files = dt.files;
+            fileInput.files = dt.files;
+            showFilePreview(file);
+        });
+
+        function handleFileSelect(input) {
+            if (!input.files.length) return;
+            const file = input.files[0];
+            if (!validateFile(file)) {
+                removeFile();
+                return;
+            }
             showFilePreview(file);
         }
-    });
 
-    function handleFileSelect(input) {
-        if (input.files.length > 0) showFilePreview(input.files[0]);
-    }
+        function validateFile(file) {
+            const ext = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+            if (!allowedExtensions.includes(ext)) {
+                showFileError(`Chỉ chấp nhận file ${allowedExtensions.map(x => x.toUpperCase()).join(', ')}.`);
+                return false;
+            }
 
-    function showFilePreview(file) {
-        const ext = file.name.split('.').pop().toLowerCase();
-        const icons = { pdf: 'bi-file-earmark-pdf-fill text-danger', docx: 'bi-file-earmark-word-fill text-primary', pptx: 'bi-file-earmark-ppt-fill text-warning' };
-        document.getElementById('filePreviewIcon').innerHTML = `<i class="bi ${icons[ext] || 'bi-file-earmark'} fs-1"></i>`;
-        document.getElementById('filePreviewName').textContent = file.name;
-        document.getElementById('filePreviewSize').textContent = formatBytes(file.size);
-        document.getElementById('uploadZoneContent').classList.add('d-none');
-        document.getElementById('filePreview').classList.remove('d-none');
+            if (file.size > maxFileSizeBytes) {
+                showFileError(`File vượt quá giới hạn ${maxFileSizeMb} MB.`);
+                return false;
+            }
 
-        // Auto-fill title from filename
-        const titleInput = document.getElementById('docTitle');
-        if (!titleInput.value) {
-            titleInput.value = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+            clearFileError();
+            return true;
         }
-    }
 
-    function removeFile() {
-        document.getElementById('fileInput').value = '';
-        document.getElementById('uploadZoneContent').classList.remove('d-none');
-        document.getElementById('filePreview').classList.add('d-none');
-    }
+        function showFileError(message) {
+            clientFileError.textContent = message;
+            clientFileError.classList.remove('d-none');
+        }
 
-    function formatBytes(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-        return (bytes/(1024*1024)).toFixed(1) + ' MB';
-    }
+        function clearFileError() {
+            clientFileError.textContent = '';
+            clientFileError.classList.add('d-none');
+        }
 
-    // Load chapters by subject
-    function loadUploadChapters(subjectId) {
-        const select = document.getElementById('chapterSelect');
-        select.innerHTML = '<option value="">Đang tải...</option>';
-        if (!subjectId) { select.innerHTML = '<option value="">— Chọn chương —</option>'; return; }
-        fetch('/Document/GetChapters?subjectId=' + subjectId)
-            .then(r => r.json())
-            .then(data => {
-                select.innerHTML = '<option value="">— Chọn chương —</option>';
-                data.forEach(c => {
-                    select.innerHTML += `<option value="${c.chapterID}">Chương ${c.chapterNumber}: ${c.chapterName}</option>`;
+        function showFilePreview(file) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const icons = {
+                pdf: 'bi-file-earmark-pdf-fill text-danger',
+                docx: 'bi-file-earmark-word-fill text-primary',
+                pptx: 'bi-file-earmark-ppt-fill text-warning'
+            };
+            const fallbackIcon = 'bi-file-earmark-fill text-secondary';
+
+            document.getElementById('filePreviewIcon').innerHTML = `<i class="bi ${icons[ext] ?? fallbackIcon} fs-1"></i>`;
+            document.getElementById('filePreviewName').textContent = file.name;
+            document.getElementById('filePreviewSize').textContent = formatBytes(file.size);
+            document.getElementById('uploadZoneContent').classList.add('d-none');
+            document.getElementById('filePreview').classList.remove('d-none');
+
+            const titleInput = document.getElementById('docTitle');
+            if (!titleInput.value.trim()) {
+                titleInput.value = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+            }
+        }
+
+        function removeFile() {
+            fileInput.value = '';
+            document.getElementById('uploadZoneContent').classList.remove('d-none');
+            document.getElementById('filePreview').classList.add('d-none');
+            clearFileError();
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function loadUploadChapters(subjectId) {
+            chapterSelect.disabled = true;
+            chapterSelect.innerHTML = '<option value="">Đang tải...</option>';
+
+            if (!subjectId) {
+                chapterSelect.innerHTML = '<option value="">-- Chọn chương --</option>';
+                chapterSelect.disabled = false;
+                return;
+            }
+
+            fetch('/Document/GetChapters?subjectId=' + encodeURIComponent(subjectId))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Không thể tải danh sách chương.');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    chapterSelect.innerHTML = '<option value="">-- Chọn chương --</option>';
+                    data.forEach(c => {
+                        const chapterId = c.chapterID ?? c.chapterId ?? c.ChapterID ?? c.ChapterId;
+                        const chapterNumber = c.chapterNumber ?? c.ChapterNumber ?? '';
+                        const chapterName = c.chapterName ?? c.ChapterName ?? '';
+
+                        if (!chapterId) return;
+
+                        const option = document.createElement('option');
+                        option.value = chapterId;
+                        option.textContent = `Chương ${chapterNumber}: ${chapterName}`;
+                        chapterSelect.appendChild(option);
+                    });
+                })
+                .catch(() => {
+                    chapterSelect.innerHTML = '<option value="">Không tải được chương</option>';
+                })
+                .finally(() => {
+                    chapterSelect.disabled = false;
                 });
-            });
-    }
+        }
 
-    // Upload button loading state
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        document.querySelector('#btnUpload .btn-text').classList.add('d-none');
-        document.querySelector('#btnUpload .btn-loading').classList.remove('d-none');
-        document.getElementById('btnUpload').disabled = true;
-    });
-</script>
+        document.getElementById('uploadForm').addEventListener('submit', function (e) {
+            if (fileInput.files.length && !validateFile(fileInput.files[0])) {
+                e.preventDefault();
+                return;
+            }
+
+            if (!this.checkValidity()) {
+                return;
+            }
+
+            uploadButton.querySelector('.btn-text').classList.add('d-none');
+            uploadButton.querySelector('.btn-loading').classList.remove('d-none');
+            uploadButton.disabled = true;
+        });
+    </script>
 }

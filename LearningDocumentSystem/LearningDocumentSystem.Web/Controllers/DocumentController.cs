@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
 using System.Security.Claims;
+using System.Linq;
 
 namespace LearningDocumentSystem.Web.Controllers
 {
@@ -17,6 +18,7 @@ namespace LearningDocumentSystem.Web.Controllers
         private readonly ISubjectService  _subjectService;
         private readonly IChapterService  _chapterService;
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _config;
         private readonly ILogger<DocumentController> _logger;
 
         public DocumentController(
@@ -24,12 +26,14 @@ namespace LearningDocumentSystem.Web.Controllers
             ISubjectService subjectService,
             IChapterService chapterService,
             IWebHostEnvironment env,
+            IConfiguration config,
             ILogger<DocumentController> logger)
         {
             _documentService = documentService;
             _subjectService  = subjectService;
             _chapterService  = chapterService;
             _env             = env;
+            _config          = config;
             _logger          = logger;
         }
 
@@ -80,6 +84,7 @@ namespace LearningDocumentSystem.Web.Controllers
         [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Upload(int? subjectId = null)
         {
+            PopulateUploadUiSettings();
             var subjects = (await _subjectService.GetAllAsync()).ToList();
 
             // Demo 1 môn: nếu DB chỉ có 1 môn thì auto select.
@@ -107,6 +112,43 @@ namespace LearningDocumentSystem.Web.Controllers
         [Authorize(Policy = "TeacherUp")]
         public async Task<IActionResult> Upload(DocumentUploadViewModel model)
         {
+            PopulateUploadUiSettings();
+            var allowedFileTypes = GetAllowedFileTypes();
+            var maxFileSizeBytes = GetMaxFileSizeBytes();
+
+            if (model.File != null)
+            {
+                var extension = Path.GetExtension(model.File.FileName)
+                    .TrimStart('.')
+                    .ToLowerInvariant();
+
+                if (string.IsNullOrWhiteSpace(extension)
+                    || !allowedFileTypes.Contains(extension, StringComparer.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(nameof(model.File), AppMessages.MsgInvalidFileType);
+                }
+
+                if (model.File.Length > maxFileSizeBytes)
+                {
+                    ModelState.AddModelError(nameof(model.File), AppMessages.MsgFileSizeExceeded);
+                }
+            }
+
+            var selectedChapter = model.ChapterId > 0
+                ? await _chapterService.GetByIdAsync(model.ChapterId)
+                : null;
+
+            if (model.ChapterId > 0 && selectedChapter == null)
+            {
+                ModelState.AddModelError(nameof(model.ChapterId), "Chương không tồn tại.");
+            }
+            else if (selectedChapter != null
+                     && model.SelectedSubjectId.HasValue
+                     && selectedChapter.SubjectID != model.SelectedSubjectId.Value)
+            {
+                ModelState.AddModelError(nameof(model.ChapterId), "Chương đã chọn không thuộc môn học này.");
+            }
+
             if (!ModelState.IsValid)
             {
                 await PopulateUploadDropdownsAsync(model);
@@ -162,6 +204,43 @@ namespace LearningDocumentSystem.Web.Controllers
             model.Chapters = selectedSubjectId.HasValue
                 ? await _chapterService.GetBySubjectAsync(selectedSubjectId.Value)
                 : [];
+        }
+
+        private void PopulateUploadUiSettings()
+        {
+            var allowedFileTypes = GetAllowedFileTypes();
+            var maxFileSizeBytes = GetMaxFileSizeBytes();
+
+            ViewBag.AllowedFileTypes = allowedFileTypes;
+            ViewBag.MaxFileSizeBytes = maxFileSizeBytes;
+            ViewBag.MaxFileSizeMB = Math.Max(1, (long)Math.Ceiling(maxFileSizeBytes / (1024d * 1024d)));
+        }
+
+        private string[] GetAllowedFileTypes()
+        {
+            var configuredTypes = _config
+                .GetSection("AppSettings:AllowedFileTypes")
+                .GetChildren()
+                .Select(x => x.Value?.Trim().TrimStart('.').ToLowerInvariant())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Cast<string>()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            return configuredTypes.Length > 0
+                ? configuredTypes
+                : AppConstants.AllowedFileTypes;
+        }
+
+        private long GetMaxFileSizeBytes()
+        {
+            if (long.TryParse(_config["AppSettings:MaxFileSizeMB"], out var maxFileSizeMb)
+                && maxFileSizeMb > 0)
+            {
+                return maxFileSizeMb * 1024 * 1024;
+            }
+
+            return AppConstants.MaxFileSizeBytes;
         }
 
         // GET: /Document/Detail/5

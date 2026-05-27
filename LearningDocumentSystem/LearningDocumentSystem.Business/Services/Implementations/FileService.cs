@@ -3,8 +3,8 @@ using LearningDocumentSystem.Common.Constants;
 using LearningDocumentSystem.Common.Exceptions;
 using LearningDocumentSystem.Common.Helpers;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace LearningDocumentSystem.Business.Services.Implementations
 {
@@ -24,24 +24,23 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             if (file == null || file.Length == 0)
                 throw new InvalidFileException("File không hợp lệ.");
 
-            if (!FileHelper.IsAllowedExtension(file.FileName))
+            var fileType = FileHelper.GetFileType(file.FileName);
+            if (!GetAllowedFileTypes().Contains(fileType))
                 throw new InvalidFileException(AppMessages.MsgInvalidFileType);
 
-            if (file.Length > AppConstants.MaxFileSizeBytes)
+            if (file.Length > GetMaxFileSizeBytes())
                 throw new InvalidFileException(AppMessages.MsgFileSizeExceeded);
 
-            // Tạo tên file unique
             var uniqueFileName = FileHelper.GenerateStoragePath(file.FileName);
             var fullPath = Path.Combine(uploadFolder, uniqueFileName);
 
-            // Đảm bảo thư mục tồn tại
             Directory.CreateDirectory(uploadFolder);
 
-            using var stream = new FileStream(fullPath, FileMode.Create);
+            await using var stream = new FileStream(fullPath, FileMode.Create);
             await file.CopyToAsync(stream);
 
             _logger.LogInformation("File saved: {FileName}", uniqueFileName);
-            return uniqueFileName; // Chỉ trả về tên file, không phải full path
+            return uniqueFileName;
         }
 
         public void DeleteFile(string storagePath, string uploadFolder)
@@ -52,6 +51,32 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 File.Delete(fullPath);
                 _logger.LogInformation("File deleted: {Path}", storagePath);
             }
+        }
+
+        private string[] GetAllowedFileTypes()
+        {
+            var configuredTypes = _config
+                .GetSection("AppSettings:AllowedFileTypes")
+                .GetChildren()
+                .Select(x => x.Value?.Trim().TrimStart('.').ToLowerInvariant())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Cast<string>()
+                .ToArray();
+
+            return configuredTypes.Length > 0
+                ? configuredTypes
+                : AppConstants.AllowedFileTypes;
+        }
+
+        private long GetMaxFileSizeBytes()
+        {
+            if (long.TryParse(_config["AppSettings:MaxFileSizeMB"], out var maxFileSizeMb)
+                && maxFileSizeMb > 0)
+            {
+                return maxFileSizeMb * 1024 * 1024;
+            }
+
+            return AppConstants.MaxFileSizeBytes;
         }
     }
 }

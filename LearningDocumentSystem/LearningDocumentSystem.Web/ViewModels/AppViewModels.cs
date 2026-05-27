@@ -46,7 +46,7 @@ namespace LearningDocumentSystem.Web.ViewModels
         [Display(Name = "Tiêu đề tài liệu")]
         public string Title { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Vui lòng chọn chương")]
+        [Range(1, int.MaxValue, ErrorMessage = "Vui lòng chọn chương")]
         [Display(Name = "Chương")]
         public int ChapterId { get; set; }
 
@@ -57,6 +57,9 @@ namespace LearningDocumentSystem.Web.ViewModels
         // Dropdown data
         public IEnumerable<SubjectDto> Subjects { get; set; } = [];
         public IEnumerable<ChapterDto> Chapters { get; set; } = [];
+
+        [Required(ErrorMessage = "Vui lòng chọn môn học")]
+        [Display(Name = "Môn học")]
         public int? SelectedSubjectId { get; set; }
     }
 
