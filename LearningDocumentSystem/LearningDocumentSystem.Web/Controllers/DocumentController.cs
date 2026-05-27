@@ -38,12 +38,23 @@ namespace LearningDocumentSystem.Web.Controllers
         public async Task<IActionResult> Index(
             string? keyword, int? subjectId, int? chapterId, string? status, int page = 1)
         {
+            // Nếu chỉ truyền chapterId (vd: click từ màn Chapter) thì resolve subjectId
+            // để dropdown Môn/Chương hiển thị đúng dữ liệu.
+            if (!subjectId.HasValue && chapterId.HasValue)
+            {
+                var selectedChapter = await _chapterService.GetByIdAsync(chapterId.Value);
+                if (selectedChapter != null)
+                {
+                    subjectId = selectedChapter.SubjectID;
+                }
+            }
+
             var (items, total) = await _documentService.GetPagedAsync(
                 keyword, subjectId, chapterId, status, page, AppConstants.DefaultPageSize);
 
             var subjects = await _subjectService.GetAllAsync();
-            var chapters = chapterId.HasValue || subjectId.HasValue
-                ? await _chapterService.GetBySubjectAsync(subjectId ?? 0)
+            var chapters = subjectId.HasValue
+                ? await _chapterService.GetBySubjectAsync(subjectId.Value)
                 : [];
 
             var vm = new DocumentListViewModel
@@ -67,14 +78,26 @@ namespace LearningDocumentSystem.Web.Controllers
         // GET: /Document/Upload
         [HttpGet]
         [Authorize(Policy = "TeacherUp")]
-        public async Task<IActionResult> Upload()
+        public async Task<IActionResult> Upload(int? subjectId = null)
         {
-            var subjects = await _subjectService.GetAllAsync();
-            var chapters = await _chapterService.GetAllAsync();
+            var subjects = (await _subjectService.GetAllAsync()).ToList();
+
+            // Demo 1 môn: nếu DB chỉ có 1 môn thì auto select.
+            var selectedSubjectId = subjectId;
+            if (!selectedSubjectId.HasValue && subjects.Count == 1)
+            {
+                selectedSubjectId = subjects[0].SubjectID;
+            }
+
+            var chapters = selectedSubjectId.HasValue
+                ? await _chapterService.GetBySubjectAsync(selectedSubjectId.Value)
+                : [];
+
             return View(new DocumentUploadViewModel
             {
                 Subjects = subjects,
-                Chapters = chapters
+                Chapters = chapters,
+                SelectedSubjectId = selectedSubjectId
             });
         }
 
@@ -86,8 +109,7 @@ namespace LearningDocumentSystem.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                model.Subjects = await _subjectService.GetAllAsync();
-                model.Chapters = await _chapterService.GetAllAsync();
+                await PopulateUploadDropdownsAsync(model);
                 return View(model);
             }
 
@@ -111,10 +133,35 @@ namespace LearningDocumentSystem.Web.Controllers
             {
                 _logger.LogError(ex, "Upload failed.");
                 ModelState.AddModelError(string.Empty, ex.Message);
-                model.Subjects = await _subjectService.GetAllAsync();
-                model.Chapters = await _chapterService.GetAllAsync();
+                await PopulateUploadDropdownsAsync(model);
                 return View(model);
             }
+        }
+
+        private async Task PopulateUploadDropdownsAsync(DocumentUploadViewModel model)
+        {
+            var subjects = (await _subjectService.GetAllAsync()).ToList();
+            model.Subjects = subjects;
+
+            int? selectedSubjectId = model.SelectedSubjectId;
+            if (!selectedSubjectId.HasValue || selectedSubjectId.Value <= 0)
+            {
+                // Nếu chỉ có ChapterId, suy ra SubjectID từ Chapter
+                if (model.ChapterId > 0)
+                {
+                    var chapter = await _chapterService.GetByIdAsync(model.ChapterId);
+                    selectedSubjectId = chapter?.SubjectID;
+                }
+                else if (subjects.Count == 1)
+                {
+                    selectedSubjectId = subjects[0].SubjectID;
+                }
+            }
+
+            model.SelectedSubjectId = selectedSubjectId;
+            model.Chapters = selectedSubjectId.HasValue
+                ? await _chapterService.GetBySubjectAsync(selectedSubjectId.Value)
+                : [];
         }
 
         // GET: /Document/Detail/5

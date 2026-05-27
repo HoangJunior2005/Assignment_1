@@ -38,7 +38,7 @@
                             <label class="form-label fw-semibold">
                                 <i class="bi bi-journal-bookmark me-1"></i> Môn học
                             </label>
-                            <select class="form-select" id="subjectSelect" onchange="loadUploadChapters(this.value)">
+                            <select asp-for="SelectedSubjectId" class="form-select" id="subjectSelect" onchange="loadUploadChapters(this.value)">
                                 <option value="">— Chọn môn học —</option>
                                 @foreach (var s in Model.Subjects)
                                 {
