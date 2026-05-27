@@ -36,10 +36,10 @@ namespace LearningDocumentSystem.Web.Controllers
         // GET: /Document
         [HttpGet]
         public async Task<IActionResult> Index(
-            string? keyword, int? subjectId, int? chapterId, int page = 1)
+            string? keyword, int? subjectId, int? chapterId, string? status, int page = 1)
         {
             var (items, total) = await _documentService.GetPagedAsync(
-                keyword, subjectId, chapterId, page, AppConstants.DefaultPageSize);
+                keyword, subjectId, chapterId, status, page, AppConstants.DefaultPageSize);
 
             var subjects = await _subjectService.GetAllAsync();
             var chapters = chapterId.HasValue || subjectId.HasValue
@@ -54,6 +54,7 @@ namespace LearningDocumentSystem.Web.Controllers
                 Keyword           = keyword,
                 SelectedSubjectId = subjectId,
                 SelectedChapterId = chapterId,
+                SelectedStatus    = status,
                 CurrentPage       = page,
                 TotalCount        = total,
                 TotalPages        = (int)Math.Ceiling(total / (double)AppConstants.DefaultPageSize),

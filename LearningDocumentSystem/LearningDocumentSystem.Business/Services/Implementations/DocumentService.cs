@@ -42,10 +42,10 @@ namespace LearningDocumentSystem.Business.Services.Implementations
         public void SetUploadPath(string path) => _uploadPath = path;
 
         public async Task<(IEnumerable<DocumentDto> Items, int TotalCount)> GetPagedAsync(
-            string? keyword, int? subjectId, int? chapterId, int page, int pageSize)
+            string? keyword, int? subjectId, int? chapterId, string? status, int page, int pageSize)
         {
             var (items, total) = await _uow.Documents.GetPagedAsync(
-                keyword, subjectId, chapterId, page, pageSize);
+                keyword, subjectId, chapterId, status, page, pageSize);
             return (_mapper.Map<IEnumerable<DocumentDto>>(items), total);
         }
 
@@ -172,7 +172,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             var processing   = await _uow.Documents.CountByStatusAsync(AppConstants.StatusProcessing);
             var failed       = await _uow.Documents.CountByStatusAsync(AppConstants.StatusFailed);
 
-            var (recent, _) = await _uow.Documents.GetPagedAsync(null, null, null, 1, 5);
+            var (recent, _) = await _uow.Documents.GetPagedAsync(null, null, null, null, 1, 5);
 
             return new DashboardDto
             {
