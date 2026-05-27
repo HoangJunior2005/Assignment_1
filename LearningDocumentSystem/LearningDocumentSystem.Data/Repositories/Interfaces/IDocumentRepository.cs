@@ -22,7 +22,7 @@ namespace LearningDocumentSystem.Data.Repositories.Interfaces
         Task<IEnumerable<Document>> GetByChapterIdAsync(int chapterId);
         Task<IEnumerable<Document>> SearchAsync(string? keyword, int? subjectId, int? chapterId);
         Task<(IEnumerable<Document> Items, int TotalCount)> GetPagedAsync(
-            string? keyword, int? subjectId, int? chapterId,
+            string? keyword, int? subjectId, int? chapterId, string? status,
             int page, int pageSize);
         Task<int> CountByStatusAsync(string status);
         Task UpdateStatusAsync(int documentId, string status);

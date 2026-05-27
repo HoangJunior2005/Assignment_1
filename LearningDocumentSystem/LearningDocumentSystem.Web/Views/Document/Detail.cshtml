@@ -73,6 +73,9 @@
                     <dt><i class="bi bi-calendar me-1"></i>Ngày upload</dt>
                     <dd>@Model.UploadedAt.ToString("dd/MM/yyyy HH:mm")</dd>
 
+                    <dt><i class="bi bi-check2-circle me-1"></i>Thời gian index</dt>
+                    <dd>@(Model.IndexedAt.HasValue ? Model.IndexedAt.Value.ToString("dd/MM/yyyy HH:mm") : "—")</dd>
+
                     <dt><i class="bi bi-activity me-1"></i>Trạng thái</dt>
                     <dd>
                         @{

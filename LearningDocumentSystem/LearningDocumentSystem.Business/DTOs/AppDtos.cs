@@ -111,6 +111,7 @@ namespace LearningDocumentSystem.Business.DTOs
         public int UploadedBy { get; set; }
         public string UploadedByName { get; set; } = string.Empty;
         public DateTime UploadedAt { get; set; }
+        public DateTime? IndexedAt { get; set; }
         public int ChunkCount { get; set; }
     }
 
