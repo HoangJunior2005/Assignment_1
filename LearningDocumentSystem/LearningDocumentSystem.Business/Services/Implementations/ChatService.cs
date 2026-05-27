@@ -3,6 +3,7 @@ using LearningDocumentSystem.Business.Services.Interfaces;
 using LearningDocumentSystem.Data.Repositories.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LearningDocumentSystem.Business.Services.Implementations
 {
@@ -11,6 +12,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
         private readonly IUnitOfWork _uow;
         private readonly IEmbeddingService _embeddingService;
         private readonly ILogger<ChatService> _logger;
+
+        private const int ExpectedDimension = 512;
 
         public ChatService(
             IUnitOfWork uow,
@@ -24,7 +27,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
         public async Task<ChatResponseDto> AskQuestionAsync(string question, int? subjectId = null, int? chapterId = null)
         {
-            _logger.LogInformation("Processing question: '{Question}' with filter sub={SubId}, chap={ChapId}", question, subjectId, chapterId);
+            _logger.LogInformation("Processing question: '{Question}' | sub={SubId}, chap={ChapId}", question, subjectId, chapterId);
 
             var response = new ChatResponseDto();
 
@@ -36,21 +39,18 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
             try
             {
-                // Step 1: Sinh vector embedding giả lập cho câu hỏi của người dùng
-                var questionEmbJson = await _embeddingService.GenerateFakeEmbeddingAsync(question);
+                var questionEmbJson = await _embeddingService.GenerateEmbeddingAsync(question);
                 var questionVector = JsonSerializer.Deserialize<float[]>(questionEmbJson);
 
                 if (questionVector == null || questionVector.Length == 0)
                 {
-                    response.Answer = "Đã xảy ra lỗi khi tạo mã nhúng câu hỏi. Vui lòng thử lại.";
+                    response.Answer = "Đã xảy ra lỗi khi phân tích câu hỏi. Vui lòng thử lại.";
                     return response;
                 }
 
-                // Step 2: Lấy tất cả chunks hoạt động từ cơ sở dữ liệu (có lọc theo Môn học / Chương học)
                 var chunksInDb = await _uow.DocumentChunks.GetChunksForRAGAsync(subjectId, chapterId);
                 var scoredChunks = new List<(float Score, Entities.Models.DocumentChunk Chunk)>();
 
-                // Step 3: Tính độ tương đồng Cosine (Dot product vì vector đã chuẩn hóa magnitude = 1)
                 foreach (var chunk in chunksInDb)
                 {
                     if (chunk.Embedding == null || string.IsNullOrWhiteSpace(chunk.Embedding.VectorData))
@@ -59,55 +59,49 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                     try
                     {
                         var chunkVector = JsonSerializer.Deserialize<float[]>(chunk.Embedding.VectorData);
-                        if (chunkVector == null || chunkVector.Length != questionVector.Length)
+
+                        if (chunkVector == null || chunkVector.Length != ExpectedDimension)
                             continue;
 
-                        // Tính Tích vô hướng (Dot Product)
-                        float score = 0f;
-                        for (int i = 0; i < questionVector.Length; i++)
-                        {
-                            score += questionVector[i] * chunkVector[i];
-                        }
-
-                        // Điều chỉnh điểm số chút ít nếu câu hỏi chứa từ khóa của chunk (tăng tính phù hợp ngữ cảnh thực tế)
-                        var words = question.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                        int matches = 0;
-                        foreach (var word in words)
-                        {
-                            if (word.Length > 2 && chunk.ContentText.ToLowerInvariant().Contains(word))
-                            {
-                                matches++;
-                            }
-                        }
-                        if (matches > 0)
-                        {
-                            score += 0.05f * Math.Min(matches, 5); // Boost điểm nếu khớp từ khóa
-                        }
-
-                        scoredChunks.Add((score, chunk));
+                        float semanticScore = DotProduct(questionVector, chunkVector);
+                        float keywordBoost = ComputeKeywordBoost(question, chunk.ContentText);
+                        float finalScore = semanticScore + keywordBoost;
+                        scoredChunks.Add((finalScore, chunk));
                     }
                     catch (Exception ex)
-                      {
+                    {
                         _logger.LogWarning(ex, "Error parsing vector for chunk ID {ChunkId}", chunk.ChunkID);
                     }
                 }
 
-                // Step 4: Sắp xếp giảm dần và lấy tối đa top 3 phân đoạn phù hợp nhất
                 var topChunks = scoredChunks
                     .OrderByDescending(sc => sc.Score)
                     .Take(3)
                     .ToList();
 
-                // Chỉ giữ các phân đoạn có độ tương đồng tích cực
-                var validChunks = topChunks.Where(tc => tc.Score > 0.05f).ToList();
+                var validChunks = topChunks.Where(tc => tc.Score > 0.01f).ToList();
 
                 if (!validChunks.Any())
                 {
-                    response.Answer = "Xin lỗi, tôi không tìm thấy tài liệu liên quan nào trong phạm vi môn học hoặc chương học đã chọn để trả lời câu hỏi của bạn. Bạn vui lòng cung cấp câu hỏi chi tiết hơn hoặc tải thêm tài liệu nhé!";
+                    _logger.LogWarning("No compatible 512-dim embeddings found. Falling back to keyword-only search.");
+
+                    var keywordScored = chunksInDb
+                        .Select(c => (Score: ComputeKeywordBoost(question, c.ContentText), Chunk: c))
+                        .Where(x => x.Score > 0f)
+                        .OrderByDescending(x => x.Score)
+                        .Take(3)
+                        .ToList();
+
+                    validChunks = keywordScored;
+                }
+
+                if (!validChunks.Any())
+                {
+                    response.Answer = "Xin lỗi, tôi không tìm thấy nội dung liên quan trong tài liệu học tập. " +
+                                      "Bạn thử chọn đúng môn học ở bên trái, hoặc đặt câu hỏi theo sát các khái niệm trong bài giảng nhé!";
                     return response;
                 }
 
-                // Step 5: Đóng gói nguồn trích dẫn
                 foreach (var item in validChunks)
                 {
                     var source = new ChatSourceDto
@@ -115,16 +109,15 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                         DocumentID = item.Chunk.DocumentID,
                         DocumentTitle = item.Chunk.Document.Title,
                         PageNumber = item.Chunk.PageNumber,
-                        SimilarityScore = Math.Clamp(item.Score * 100f, 10f, 99.9f), // Quy đổi sang tỷ lệ phần trăm trực quan
-                        ContentSnippet = item.Chunk.ContentText.Length > 300 
-                            ? item.Chunk.ContentText[..300] + "..." 
+                        SimilarityScore = Math.Clamp(item.Score * 100f, 5f, 99.9f),
+                        ContentSnippet = item.Chunk.ContentText.Length > 300
+                            ? item.Chunk.ContentText[..300] + "..."
                             : item.Chunk.ContentText
                     };
                     response.Sources.Add(source);
                 }
 
-                // Step 6: Tạo câu trả lời AI chất lượng cao (Mock RAG Engine)
-                response.Answer = GenerateRagResponse(question, validChunks);
+                response.Answer = GenerateAnswerFromContext(question, validChunks);
             }
             catch (Exception ex)
             {
@@ -135,63 +128,154 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             return response;
         }
 
-        /// <summary>
-        /// Tạo câu trả lời RAG thông minh bằng cách phân tích văn cảnh của các chunks được truy xuất
-        /// </summary>
-        private string GenerateRagResponse(string question, List<(float Score, Entities.Models.DocumentChunk Chunk)> matchedChunks)
+        private static float DotProduct(float[] a, float[] b)
+        {
+            float sum = 0f;
+            int len = Math.Min(a.Length, b.Length);
+            for (int i = 0; i < len; i++)
+                sum += a[i] * b[i];
+            return sum;
+        }
+
+        private static float ComputeKeywordBoost(string question, string chunkContent)
+        {
+            var questionWords = Regex.Matches(question.ToLowerInvariant(), @"[\p{L}\p{N}]+")
+                .Select(m => m.Value)
+                .Where(w => w.Length >= 3)
+                .Distinct()
+                .ToList();
+
+            if (!questionWords.Any()) return 0f;
+
+            var contentLower = chunkContent.ToLowerInvariant();
+            int matches = questionWords.Count(word => contentLower.Contains(word));
+
+            return 0.25f * ((float)matches / questionWords.Count);
+        }
+
+        private static string GenerateAnswerFromContext(
+            string question,
+            List<(float Score, Entities.Models.DocumentChunk Chunk)> matchedChunks)
         {
             var bestChunk = matchedChunks.First().Chunk;
             var docTitle = bestChunk.Document.Title;
-            var pageInfo = bestChunk.PageNumber.HasValue ? $"trang {bestChunk.PageNumber.Value}" : "văn bản";
+            var pageInfo = bestChunk.PageNumber.HasValue ? $"trang {bestChunk.PageNumber.Value}" : "tài liệu";
             var chapterName = bestChunk.Document.Chapter?.ChapterName ?? "tài liệu";
             var chapterNum = bestChunk.Document.Chapter?.ChapterNumber ?? 1;
 
+            var keywords = Regex.Matches(question.ToLowerInvariant(), @"[\p{L}\p{N}]+")
+                .Select(m => m.Value)
+                .Where(w => w.Length >= 3)
+                .ToHashSet();
+
             var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Dựa trên tài liệu **\"{docTitle}\"** (Chương {chapterNum}: *{chapterName}*, {pageInfo}), tôi xin trả lời câu hỏi của bạn như sau:\n");
+            sb.AppendLine($"Dựa trên tài liệu **\"{docTitle}\"** (Chương {chapterNum}: *{chapterName}*, {pageInfo}):\n");
 
-            // Tạo nội dung trả lời dựa trên văn cảnh trích xuất được
-            var contextText = bestChunk.ContentText;
-            
-            // Tìm các đoạn văn ngắn chứa từ khóa từ văn cảnh hoặc trả về đoạn văn chất lượng cao
-            var segments = contextText.Split(new[] { '.', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                                     .Select(s => s.Trim())
-                                     .Where(s => s.Length > 25)
-                                     .Take(4)
-                                     .ToList();
+            var relevantSentences = ExtractRelevantSentences(bestChunk.ContentText, keywords, topN: 4);
 
-            if (segments.Any())
+            if (relevantSentences.Any())
             {
-                sb.AppendLine("Dưới đây là các luận điểm chính từ tài liệu học tập:");
-                foreach (var seg in segments)
-                {
-                    sb.AppendLine($"- **{seg.Split(':').First()}**: {string.Join(':', seg.Split(':').Skip(1))}");
-                }
+                var cleaned = relevantSentences
+                    .Select(CleanFragmentStart)
+                    .Where(s => s.Length >= 10)
+                    .ToList();
+
+                sb.AppendLine(string.Join(" ", cleaned.Any() ? cleaned : relevantSentences));
             }
             else
             {
-                sb.AppendLine(contextText);
+                var cleanText = NormalizeLineBreaks(bestChunk.ContentText);
+                var preview = cleanText.Length > 500 ? cleanText[..500] + "..." : cleanText;
+                sb.AppendLine(preview);
             }
 
-            // Nếu có nhiều hơn 1 nguồn trích dẫn phù hợp, mở rộng câu trả lời thêm thông tin bổ trợ
             if (matchedChunks.Count > 1)
             {
                 var secondChunk = matchedChunks[1].Chunk;
-                sb.AppendLine($"\nNgoài ra, tài liệu cũng bổ sung thêm thông tin tại chương học liên quan:");
-                
-                var extraSegments = secondChunk.ContentText.Split(new[] { '.', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                                                          .Select(s => s.Trim())
-                                                          .Where(s => s.Length > 30)
-                                                          .Take(2)
-                                                          .ToList();
-                foreach (var es in extraSegments)
+                var extraSentences = ExtractRelevantSentences(secondChunk.ContentText, keywords, topN: 2);
+
+                if (extraSentences.Any())
                 {
-                    sb.AppendLine($"> *\"{es}\"*");
+                    sb.AppendLine($"\nThông tin bổ sung từ tài liệu liên quan:");
+                    foreach (var es in extraSentences)
+                    {
+                        sb.AppendLine($"> *\"{es}\"*");
+                    }
                 }
             }
 
-            sb.AppendLine("\n*Hy vọng thông tin này giúp ích cho quá trình ôn tập môn học của bạn!*");
-
+            sb.AppendLine("\n*Hy vọng thông tin này giúp ích cho việc ôn tập của bạn!*");
             return sb.ToString();
+        }
+
+        private static string NormalizeLineBreaks(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+
+            var normalized = Regex.Replace(text, @"(?<![.!?:;\n])\n", " ");
+            normalized = Regex.Replace(normalized, @" {2,}", " ");
+
+            return normalized.Trim();
+        }
+
+        private static string CleanFragmentStart(string sentence)
+        {
+            if (string.IsNullOrWhiteSpace(sentence)) return sentence;
+
+            sentence = sentence.Trim();
+            if (sentence.Length == 0) return sentence;
+
+            char first = sentence[0];
+
+            if (char.IsLower(first))
+            {
+                int firstSpace = sentence.IndexOf(' ');
+                if (firstSpace > 0 && firstSpace < sentence.Length - 1)
+                {
+                    string rest = sentence[(firstSpace + 1)..].TrimStart();
+                    if (rest.Length > 0 && char.IsLower(rest[0]))
+                        return char.ToUpperInvariant(rest[0]) + rest[1..];
+                    return rest;
+                }
+                return string.Empty;
+            }
+
+            return sentence;
+        }
+
+        private static List<string> ExtractRelevantSentences(string text, HashSet<string> keywords, int topN)
+        {
+            if (string.IsNullOrWhiteSpace(text) || keywords.Count == 0)
+                return new List<string>();
+
+            var normalized = NormalizeLineBreaks(text);
+
+            var sentences = Regex.Split(normalized, @"(?<=[.!?])\s+")
+                .Select(s => s.Trim())
+                .Where(s => s.Length >= 20)
+                .ToList();
+
+            if (!sentences.Any()) return new List<string>();
+
+            var scored = sentences.Select((sentence, originalIndex) =>
+            {
+                var sentenceLower = sentence.ToLowerInvariant();
+                int keywordHits = keywords.Count(kw => sentenceLower.Contains(kw));
+                return (Score: keywordHits, Index: originalIndex, Sentence: sentence);
+            })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .Take(topN)
+            .OrderBy(x => x.Index)
+            .Select(x => x.Sentence)
+            .ToList();
+
+            if (!scored.Any())
+            {
+                scored = sentences.Take(topN).ToList();
+            }
+
+            return scored;
         }
     }
 }

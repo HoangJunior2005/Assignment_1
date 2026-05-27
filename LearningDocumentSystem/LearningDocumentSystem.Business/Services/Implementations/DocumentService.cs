@@ -116,7 +116,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 var embeddings = new List<Embedding>();
                 foreach (var chunk in chunkEntities)
                 {
-                    var vectorJson = await _embeddingService.GenerateFakeEmbeddingAsync(chunk.ContentText);
+                    var vectorJson = await _embeddingService.GenerateEmbeddingAsync(chunk.ContentText);
                     embeddings.Add(new Embedding
                     {
                         ChunkID    = chunk.ChunkID,

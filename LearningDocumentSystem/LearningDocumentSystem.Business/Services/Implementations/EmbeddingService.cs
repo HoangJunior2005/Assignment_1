@@ -1,41 +1,133 @@
 using LearningDocumentSystem.Business.Services.Interfaces;
-using LearningDocumentSystem.Common.Constants;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace LearningDocumentSystem.Business.Services.Implementations
 {
     public class EmbeddingService : IEmbeddingService
     {
         private readonly ILogger<EmbeddingService> _logger;
-        private readonly Random _random = new();
+
+        private const int VectorDimension = 512;
+
+        private static readonly HashSet<string> VietnameseStopWords = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "và", "của", "là", "có", "trong", "cho", "với", "các", "được", "không",
+            "này", "đó", "một", "những", "để", "hay", "hoặc", "thì", "mà", "khi",
+            "về", "theo", "từ", "tại", "bởi", "vì", "nên", "đã", "sẽ", "đang",
+            "rằng", "như", "cũng", "chỉ", "vào", "ra", "lên", "xuống", "qua",
+            "trên", "dưới", "sau", "trước", "nếu", "vậy", "thế", "còn", "nhiều",
+            "hơn", "nhất", "rất", "quá", "cả", "mọi", "bao", "gồm", "tất", "cần",
+            "the", "is", "in", "of", "and", "to", "a", "an", "for", "on", "at",
+            "by", "with", "as", "be", "are", "was", "were", "has", "have", "had"
+        };
 
         public EmbeddingService(ILogger<EmbeddingService> logger)
         {
             _logger = logger;
         }
 
-        public Task<string> GenerateFakeEmbeddingAsync(string text)
+        public Task<string> GenerateEmbeddingAsync(string text)
         {
-            _logger.LogDebug("Generating fake embedding for text length: {Len}", text.Length);
+            _logger.LogDebug("Generating embedding for text (length={Len})", text.Length);
 
-            // Tạo vector ngẫu nhiên dim 1536
-            var vector = new float[AppConstants.EmbeddingDimension];
-            for (int i = 0; i < vector.Length; i++)
+            if (string.IsNullOrWhiteSpace(text))
             {
-                // Giá trị trong khoảng [-1, 1] như embedding thật
-                vector[i] = (float)(_random.NextDouble() * 2 - 1);
+                var zeroVec = new float[VectorDimension];
+                return Task.FromResult(JsonSerializer.Serialize(zeroVec));
             }
 
-            // Normalize về unit vector (cosine similarity cần)
-            var magnitude = (float)Math.Sqrt(vector.Sum(v => v * v));
-            if (magnitude > 0)
-                for (int i = 0; i < vector.Length; i++)
-                    vector[i] /= magnitude;
+            var tokens = Tokenize(text);
 
-            // Serialize thành JSON string để lưu DB
+            if (tokens.Count == 0)
+            {
+                var zeroVec = new float[VectorDimension];
+                return Task.FromResult(JsonSerializer.Serialize(zeroVec));
+            }
+
+            var termFrequency = ComputeTermFrequency(tokens);
+
+            var vector = new float[VectorDimension];
+
+            foreach (var (term, rawTf) in termFrequency)
+            {
+                float tfWeight = (float)(Math.Log(1.0 + rawTf) / Math.Log(1.0 + tokens.Count));
+
+                int hash = GetStableHash(term);
+                int index = Math.Abs(hash % VectorDimension);
+
+                float sign = (hash >= 0) ? 1f : -1f;
+                vector[index] += sign * tfWeight;
+            }
+
+            NormalizeL2(vector);
+
             var json = JsonSerializer.Serialize(vector);
             return Task.FromResult(json);
+        }
+
+        private static List<string> Tokenize(string text)
+        {
+            var lower = text.ToLowerInvariant();
+
+            var wordMatches = Regex.Matches(lower, @"[\p{L}\p{N}]+");
+            var words = wordMatches
+                .Select(m => m.Value)
+                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w))
+                .ToList();
+
+            if (words.Count == 0) return words;
+
+            var tokens = new List<string>(words.Count * 2);
+
+            tokens.AddRange(words);
+
+            for (int i = 0; i < words.Count - 1; i++)
+            {
+                tokens.Add($"{words[i]}_{words[i + 1]}");
+            }
+
+            return tokens;
+        }
+
+        private static Dictionary<string, int> ComputeTermFrequency(List<string> tokens)
+        {
+            var tf = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var token in tokens)
+            {
+                tf.TryGetValue(token, out int current);
+                tf[token] = current + 1;
+            }
+            return tf;
+        }
+
+        private static int GetStableHash(string term)
+        {
+            const uint FnvPrime = 16777619u;
+            const uint FnvOffsetBasis = 2166136261u;
+
+            uint hash = FnvOffsetBasis;
+            foreach (char c in term)
+            {
+                hash ^= (uint)c;
+                hash *= FnvPrime;
+            }
+
+            return (int)hash;
+        }
+
+        private static void NormalizeL2(float[] vector)
+        {
+            float sumOfSquares = 0f;
+            foreach (var v in vector)
+                sumOfSquares += v * v;
+
+            if (sumOfSquares <= 1e-12f) return;
+
+            float magnitude = (float)Math.Sqrt(sumOfSquares);
+            for (int i = 0; i < vector.Length; i++)
+                vector[i] /= magnitude;
         }
     }
 }
