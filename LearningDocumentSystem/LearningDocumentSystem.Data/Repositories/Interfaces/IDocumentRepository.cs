@@ -33,6 +33,7 @@ namespace LearningDocumentSystem.Data.Repositories.Interfaces
         Task<IEnumerable<DocumentChunk>> GetByDocumentIdAsync(int documentId);
         Task<int> CountByDocumentIdAsync(int documentId);
         Task DeleteByDocumentIdAsync(int documentId);
+        Task<IEnumerable<DocumentChunk>> GetChunksForRAGAsync(int? subjectId, int? chapterId);
     }
 
     public interface IEmbeddingRepository : IGenericRepository<Embedding>

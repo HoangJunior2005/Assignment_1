@@ -93,34 +93,7 @@
                 </dl>
             </div>
         </div>
-
-        <!-- AI Stats -->
-        <div class="card-custom">
-            <div class="card-custom-header">
-                <h5><i class="bi bi-cpu me-2"></i>AI Statistics</h5>
-            </div>
-            <div class="card-custom-body">
-                <div class="ai-stat-row">
-                    <div class="ai-stat">
-                        <div class="ai-stat-num text-primary">@Model.ChunkCount</div>
-                        <div class="ai-stat-label">Chunks</div>
-                    </div>
-                    <div class="ai-stat">
-                        <div class="ai-stat-num text-success">@Model.Chunks.Count(c => c.HasEmbedding)</div>
-                        <div class="ai-stat-label">Embeddings</div>
-                    </div>
-                    <div class="ai-stat">
-                        <div class="ai-stat-num text-info">1536</div>
-                        <div class="ai-stat-label">Vector Dim</div>
-                    </div>
-                </div>
-                <div class="ai-ready-badge mt-3">
-                    <i class="bi bi-robot me-2"></i>
-                    <span>Sẵn sàng RAG / Semantic Search</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    </div><!-- end col-lg-4 -->
 
     <!-- Chunks -->
     <div class="col-lg-8">

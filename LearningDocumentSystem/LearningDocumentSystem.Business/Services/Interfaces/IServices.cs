@@ -52,6 +52,15 @@ namespace LearningDocumentSystem.Business.Services.Interfaces
 
     public interface IEmbeddingService
     {
-        Task<string> GenerateFakeEmbeddingAsync(string text);
+        /// <summary>
+        /// Sinh vector embedding cho văn bản bằng thuật toán Feature Hashing + TF-IDF weighting.
+        /// Vector có số chiều cố định, chuẩn hóa thành unit vector để tính cosine similarity.
+        /// </summary>
+        Task<string> GenerateEmbeddingAsync(string text);
+    }
+
+    public interface IChatService
+    {
+        Task<ChatResponseDto> AskQuestionAsync(string question, int? subjectId = null, int? chapterId = null);
     }
 }

@@ -144,9 +144,12 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                         if (content.Length >= AppConstants.MinChunkLength)
                             chunks.Add((content, currentPage));
 
-                        // Overlap: giữ lại ~100 ký tự cuối
+                        // Overlap: giữ lại phần cuối chunk để chunk sau có ngữ cảnh liên tục
+                        // Dùng ranh giới TỪ thay vì ranh giới ký tự để tránh cắt giữa chữ
+                        // Ví dụ: content[^100..] có thể trả về "ột lớp..." (thiếu "M" của "Một")
+                        // Fix: tìm vị trí space đầu tiên tại/sau offset (Length - ChunkOverlap)
                         var keep = content.Length > AppConstants.ChunkOverlap
-                            ? content[^AppConstants.ChunkOverlap..]
+                            ? TrimToWordBoundary(content, content.Length - AppConstants.ChunkOverlap)
                             : content;
                         buffer.Clear();
                         buffer.Append(keep).Append(' ');
@@ -163,6 +166,30 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 chunks.Add(("Tài liệu chưa có nội dung text hoặc định dạng không được hỗ trợ.", 1));
 
             return chunks;
+        }
+
+        /// <summary>
+        /// Cắt chuỗi bắt đầu từ ranh giới từ (word boundary) gần nhất tại/sau startPos.
+        /// Đảm bảo chunk không bắt đầu giữa một từ.
+        /// Ví dụ: TrimToWordBoundary("...tương Một lớp", len-100) → "Một lớp..."
+        ///        thay vì content[^100..] có thể trả về "ột lớp..."
+        /// </summary>
+        private static string TrimToWordBoundary(string text, int startPos)
+        {
+            if (startPos <= 0) return text;
+            if (startPos >= text.Length) return string.Empty;
+
+            // Tìm space đầu tiên tại hoặc sau startPos
+            int spaceIdx = text.IndexOf(' ', startPos);
+
+            if (spaceIdx > 0 && spaceIdx < text.Length - 1)
+            {
+                // Lấy từ ký tự sau space (bắt đầu từ từ mới)
+                return text[(spaceIdx + 1)..];
+            }
+
+            // Nếu không tìm thấy space → lấy từ startPos (fallback)
+            return text[startPos..];
         }
     }
 }
