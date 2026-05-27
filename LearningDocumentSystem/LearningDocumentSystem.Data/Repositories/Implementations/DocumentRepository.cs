@@ -10,9 +10,17 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
     {
         public SubjectRepository(AppDbContext context) : base(context) { }
 
+        public override async Task<IEnumerable<Subject>> GetAllAsync()
+            => await _context.Subjects
+                .Include(s => s.Chapters)
+                    .ThenInclude(c => c.Documents)
+                .OrderBy(s => s.SubjectName)
+                .ToListAsync();
+
         public async Task<Subject?> GetWithChaptersAsync(int subjectId)
             => await _context.Subjects
                 .Include(s => s.Chapters.OrderBy(c => c.ChapterNumber))
+                    .ThenInclude(c => c.Documents)
                 .FirstOrDefaultAsync(s => s.SubjectID == subjectId);
 
         public async Task<bool> IsCodeExistsAsync(string code, int? excludeId = null)
@@ -20,16 +28,25 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
                 .AnyAsync(s => s.SubjectCode == code && (!excludeId.HasValue || s.SubjectID != excludeId));
 
         public async Task<IEnumerable<Subject>> GetAllActiveAsync()
-            => await _context.Subjects.OrderBy(s => s.SubjectName).ToListAsync();
+            => await GetAllAsync();
     }
 
     public class ChapterRepository : GenericRepository<Chapter>, IChapterRepository
     {
         public ChapterRepository(AppDbContext context) : base(context) { }
 
+        public override async Task<IEnumerable<Chapter>> GetAllAsync()
+            => await _context.Chapters
+                .Include(c => c.Subject)
+                .Include(c => c.Documents)
+                .OrderBy(c => c.Subject.SubjectName)
+                .ThenBy(c => c.ChapterNumber)
+                .ToListAsync();
+
         public async Task<IEnumerable<Chapter>> GetBySubjectIdAsync(int subjectId)
             => await _context.Chapters
                 .Include(c => c.Subject)
+                .Include(c => c.Documents)
                 .Where(c => c.SubjectID == subjectId)
                 .OrderBy(c => c.ChapterNumber)
                 .ToListAsync();
