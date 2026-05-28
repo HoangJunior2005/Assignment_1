@@ -1,6 +1,7 @@
 using AutoMapper;
 using LearningDocumentSystem.Business.DTOs;
 using LearningDocumentSystem.Entities.Models;
+using LearningDocumentSystem.Common.Helpers;
 
 namespace LearningDocumentSystem.Business.Mapping
 {
@@ -46,7 +47,11 @@ namespace LearningDocumentSystem.Business.Mapping
                 .ForMember(dest => dest.UploadedByName,
                     opt => opt.MapFrom(src => src.UploadedByUser.FullName))
                 .ForMember(dest => dest.ChunkCount,
-                    opt => opt.MapFrom(src => src.Chunks.Count));
+                    opt => opt.MapFrom(src => src.Chunks.Count))
+                .ForMember(dest => dest.UploadedAt,
+                    opt => opt.MapFrom(src => DateTimeHelper.ConvertToVietnamTime(src.UploadedAt)))
+                .ForMember(dest => dest.IndexedAt,
+                    opt => opt.MapFrom(src => DateTimeHelper.ConvertToVietnamTime(src.IndexedAt)));
 
             CreateMap<Document, DocumentDetailDto>()
                 .IncludeBase<Document, DocumentDto>();
