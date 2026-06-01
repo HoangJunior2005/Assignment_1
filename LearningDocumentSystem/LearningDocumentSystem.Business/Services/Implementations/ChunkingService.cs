@@ -1,3 +1,4 @@
+#pragma warning disable SKEXP0050
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Presentation;
 using DocumentFormat.OpenXml.Wordprocessing;
@@ -7,6 +8,7 @@ using LearningDocumentSystem.Business.Services.Interfaces;
 using LearningDocumentSystem.Common.Constants;
 using Microsoft.Extensions.Logging;
 using System.Text;
+using Microsoft.SemanticKernel.Text;
 
 namespace LearningDocumentSystem.Business.Services.Implementations
 {
@@ -120,76 +122,43 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             return Task.FromResult(result);
         }
 
-        // ============================================================
-        // Chunking: tách text thành đoạn ~800 ký tự có overlap
-        // ============================================================
         private List<(string Content, int PageNumber)> ChunkText(List<(string Text, int Page)> pages)
         {
+            _logger.LogInformation("Gom nhóm phân mảnh sử dụng Microsoft Semantic Kernel TextChunker.");
             var chunks = new List<(string Content, int PageNumber)>();
-            var buffer = new StringBuilder();
-            int currentPage = 1;
+
+            // Định nghĩa custom TokenCounter để tính toán độ dài theo KÝ TỰ (Characters)
+            TextChunker.TokenCounter characterCounter = input => input.Length;
 
             foreach (var (text, page) in pages)
             {
-                currentPage = page;
-                var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (string.IsNullOrWhiteSpace(text)) continue;
 
-                foreach (var word in words)
+                // 1. Chia tách văn bản của trang hiện tại thành các câu/dòng nhỏ (tối đa 200 ký tự)
+                // để tránh cắt nửa câu ở giữa một cách tùy tiện.
+                var lines = TextChunker.SplitPlainTextLines(text, 200, characterCounter);
+
+                // 2. Gom nhóm các câu/dòng trên thành các đoạn văn lớn (chunk) tối đa 800 ký tự (AppConstants.ChunkSize)
+                // với độ chồng lấn overlap là 150 ký tự (AppConstants.ChunkOverlap).
+                var paragraphs = TextChunker.SplitPlainTextParagraphs(lines, AppConstants.ChunkSize, AppConstants.ChunkOverlap, tokenCounter: characterCounter);
+
+                foreach (var p in paragraphs)
                 {
-                    buffer.Append(word).Append(' ');
-
-                    if (buffer.Length >= AppConstants.ChunkSize)
+                    var trimmed = p.Trim();
+                    if (!string.IsNullOrWhiteSpace(trimmed) && trimmed.Length >= AppConstants.MinChunkLength)
                     {
-                        var content = buffer.ToString().Trim();
-                        if (content.Length >= AppConstants.MinChunkLength)
-                            chunks.Add((content, currentPage));
-
-                        // Overlap: giữ lại phần cuối chunk để chunk sau có ngữ cảnh liên tục
-                        // Dùng ranh giới TỪ thay vì ranh giới ký tự để tránh cắt giữa chữ
-                        // Ví dụ: content[^100..] có thể trả về "ột lớp..." (thiếu "M" của "Một")
-                        // Fix: tìm vị trí space đầu tiên tại/sau offset (Length - ChunkOverlap)
-                        var keep = content.Length > AppConstants.ChunkOverlap
-                            ? TrimToWordBoundary(content, content.Length - AppConstants.ChunkOverlap)
-                            : content;
-                        buffer.Clear();
-                        buffer.Append(keep).Append(' ');
+                        chunks.Add((trimmed, page));
                     }
                 }
             }
 
-            // Chunk cuối
-            if (buffer.Length >= AppConstants.MinChunkLength)
-                chunks.Add((buffer.ToString().Trim(), currentPage));
-
-            // Nếu không extract được nội dung → tạo 1 chunk placeholder
+            // Nếu không trích xuất được bất kỳ nội dung nào → trả về 1 chunk placeholder
             if (chunks.Count == 0)
-                chunks.Add(("Tài liệu chưa có nội dung text hoặc định dạng không được hỗ trợ.", 1));
-
-            return chunks;
-        }
-
-        /// <summary>
-        /// Cắt chuỗi bắt đầu từ ranh giới từ (word boundary) gần nhất tại/sau startPos.
-        /// Đảm bảo chunk không bắt đầu giữa một từ.
-        /// Ví dụ: TrimToWordBoundary("...tương Một lớp", len-100) → "Một lớp..."
-        ///        thay vì content[^100..] có thể trả về "ột lớp..."
-        /// </summary>
-        private static string TrimToWordBoundary(string text, int startPos)
-        {
-            if (startPos <= 0) return text;
-            if (startPos >= text.Length) return string.Empty;
-
-            // Tìm space đầu tiên tại hoặc sau startPos
-            int spaceIdx = text.IndexOf(' ', startPos);
-
-            if (spaceIdx > 0 && spaceIdx < text.Length - 1)
             {
-                // Lấy từ ký tự sau space (bắt đầu từ từ mới)
-                return text[(spaceIdx + 1)..];
+                chunks.Add(("Tài liệu chưa có nội dung text hoặc định dạng không được hỗ trợ.", 1));
             }
 
-            // Nếu không tìm thấy space → lấy từ startPos (fallback)
-            return text[startPos..];
+            return chunks;
         }
     }
 }

@@ -74,21 +74,28 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             var wordMatches = Regex.Matches(lower, @"[\p{L}\p{N}]+");
             var words = wordMatches
                 .Select(m => m.Value)
-                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w))
+                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w) && !VietnameseStopWords.Contains(RemoveDiacritics(w)))
                 .ToList();
 
-            if (words.Count == 0) return words;
+            var wordsNoAccents = wordMatches
+                .Select(m => RemoveDiacritics(m.Value))
+                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w) && !VietnameseStopWords.Contains(RemoveDiacritics(w)))
+                .ToList();
 
-            var tokens = new List<string>(words.Count * 2);
+            if (words.Count == 0 && wordsNoAccents.Count == 0) return new List<string>();
 
+            var tokens = new List<string>();
             tokens.AddRange(words);
+            tokens.AddRange(wordsNoAccents);
 
+            // Add bigrams
             for (int i = 0; i < words.Count - 1; i++)
             {
                 tokens.Add($"{words[i]}_{words[i + 1]}");
+                tokens.Add($"{wordsNoAccents[i]}_{wordsNoAccents[i + 1]}");
             }
 
-            return tokens;
+            return tokens.Distinct().ToList();
         }
 
         private static Dictionary<string, int> ComputeTermFrequency(List<string> tokens)
@@ -128,6 +135,31 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             float magnitude = (float)Math.Sqrt(sumOfSquares);
             for (int i = 0; i < vector.Length; i++)
                 vector[i] /= magnitude;
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            string normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
+            var stringBuilder = new System.Text.StringBuilder();
+
+            foreach (char c in normalizedString)
+            {
+                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    if (c == 'đ')
+                        stringBuilder.Append('d');
+                    else if (c == 'Đ')
+                        stringBuilder.Append('D');
+                    else
+                        stringBuilder.Append(c);
+                }
+            }
+
+            return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC);
         }
     }
 }

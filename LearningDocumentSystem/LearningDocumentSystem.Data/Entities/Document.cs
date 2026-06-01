@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using LearningDocumentSystem.Entities.Enums;
 
 namespace LearningDocumentSystem.Entities.Models
 {
@@ -38,6 +37,9 @@ namespace LearningDocumentSystem.Entities.Models
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? IndexedAt { get; set; }
+
+        [MaxLength(64)]
+        public string? FileHash { get; set; }
 
         // Navigation properties
         public virtual Chapter Chapter { get; set; } = null!;
