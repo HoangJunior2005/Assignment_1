@@ -33,6 +33,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 Vui lòng trả lời câu hỏi của người dùng CHỈ DỰA TRÊN ngữ cảnh (context) được cung cấp dưới đây.
 Nếu thông tin không có trong ngữ cảnh, hãy nói 'Xin lỗi, tôi không tìm thấy thông tin liên quan trong tài liệu học tập.' Không tự bịa thêm thông tin.
 Trả lời bằng tiếng Việt, định dạng rõ ràng, ngắn gọn và dễ hiểu.
+KHÔNG tự động thêm phần chú thích trích dẫn nguồn ở cuối câu trả lời (như các câu mở ngoặc đơn dạng '(theo tài liệu..., trang...)'), vì hệ thống đã tự động hiển thị các thẻ nguồn ở giao diện bên dưới.
 
 Ngữ cảnh:
 ";

@@ -82,7 +82,20 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                     .Take(3)
                     .ToList();
 
-                var validChunks = topChunks.Where(tc => tc.Score > 0.01f).ToList();
+                List<(float Score, Entities.Models.DocumentChunk Chunk)> validChunks;
+                if (topChunks.Any())
+                {
+                    float topScore = topChunks.First().Score;
+                    // Dynamic threshold: only keep chunks that are relatively close to the top score (>= 50% of top score)
+                    // and have a minimum absolute positive score of 0.01f.
+                    validChunks = topChunks
+                        .Where(tc => tc.Score > 0.01f && tc.Score >= topScore * 0.5f)
+                        .ToList();
+                }
+                else
+                {
+                    validChunks = new List<(float Score, Entities.Models.DocumentChunk Chunk)>();
+                }
 
                 if (!validChunks.Any())
                 {
@@ -95,7 +108,17 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                         .Take(3)
                         .ToList();
 
-                    validChunks = keywordScored;
+                    if (keywordScored.Any())
+                    {
+                        float topScore = keywordScored.First().Score;
+                        validChunks = keywordScored
+                            .Where(x => x.Score >= topScore * 0.5f)
+                            .ToList();
+                    }
+                    else
+                    {
+                        validChunks = new List<(float Score, Entities.Models.DocumentChunk Chunk)>();
+                    }
                 }
 
                 if (!validChunks.Any())
@@ -157,18 +180,75 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
         private static float ComputeKeywordBoost(string question, string chunkContent)
         {
-            var questionWords = Regex.Matches(question.ToLowerInvariant(), @"[\p{L}\p{N}]+")
+            if (string.IsNullOrWhiteSpace(question) || string.IsNullOrWhiteSpace(chunkContent))
+                return 0f;
+
+            var cleanQuestion = RemoveDiacritics(question).ToLowerInvariant();
+            var cleanContent = RemoveDiacritics(chunkContent).ToLowerInvariant();
+
+            // Extract all words from the question
+            var questionWords = Regex.Matches(cleanQuestion, @"[\p{L}\p{N}]+")
                 .Select(m => m.Value)
-                .Where(w => w.Length >= 3)
+                .Where(w => w.Length >= 2)
                 .Distinct()
                 .ToList();
 
             if (!questionWords.Any()) return 0f;
 
-            var contentLower = chunkContent.ToLowerInvariant();
-            int matches = questionWords.Count(word => contentLower.Contains(word));
+            // Define common stop words in both Vietnamese (stripped of diacritics) and English
+            var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "who", "what", "where", "when", "why", "how", "is", "are", "the", "a", "an", "of", "in", "on", "at", "to", "for", "with", "by", "about",
+                "la", "ai", "cua", "trong", "va", "co", "cac", "cho", "nhu", "nhung", "mot", "voi", "duoc", "nay", "khi", "de", "sau", "tai", "noi", "nao", "thi"
+            };
 
-            return 0.25f * ((float)matches / questionWords.Count);
+            // Filter out stopwords
+            var filteredWords = questionWords.Where(w => !stopWords.Contains(w)).ToList();
+            if (!filteredWords.Any()) return 0f;
+
+            float boost = 0f;
+
+            // 1. Check exact contiguous phrase matching (Trigram and Bigram)
+            // If the user query has consecutive important keywords, finding them together is an extremely strong match.
+            if (filteredWords.Count >= 3)
+            {
+                for (int i = 0; i <= filteredWords.Count - 3; i++)
+                {
+                    var trigram = $"{filteredWords[i]} {filteredWords[i + 1]} {filteredWords[i + 2]}";
+                    if (cleanContent.Contains(trigram))
+                    {
+                        boost += 1.5f; // High boost for matching full trigram phrase
+                    }
+                }
+            }
+
+            if (filteredWords.Count >= 2)
+            {
+                for (int i = 0; i <= filteredWords.Count - 2; i++)
+                {
+                    var bigram = $"{filteredWords[i]} {filteredWords[i + 1]}";
+                    if (cleanContent.Contains(bigram))
+                    {
+                        boost += 0.6f; // Moderate boost for matching bigram phrase
+                    }
+                }
+            }
+
+            // 2. Check individual whole-word matches
+            // We use Regex with word boundaries to ensure we only match whole words, preventing sub-word false matches
+            int wordMatches = 0;
+            foreach (var word in filteredWords)
+            {
+                var pattern = @"\b" + Regex.Escape(word) + @"\b";
+                if (Regex.IsMatch(cleanContent, pattern))
+                {
+                    wordMatches++;
+                }
+            }
+
+            boost += 0.15f * ((float)wordMatches / filteredWords.Count);
+
+            return boost;
         }
 
         private static string GenerateAnswerFromContext(
@@ -181,7 +261,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             var chapterName = bestChunk.Document.Chapter?.ChapterName ?? "tài liệu";
             var chapterNum = bestChunk.Document.Chapter?.ChapterNumber ?? 1;
 
-            var keywords = Regex.Matches(question.ToLowerInvariant(), @"[\p{L}\p{N}]+")
+            var cleanQuestion = RemoveDiacritics(question).ToLowerInvariant();
+            var keywords = Regex.Matches(cleanQuestion, @"[\p{L}\p{N}]+")
                 .Select(m => m.Value)
                 .Where(w => w.Length >= 3)
                 .ToHashSet();
@@ -277,7 +358,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
             var scored = sentences.Select((sentence, originalIndex) =>
             {
-                var sentenceLower = sentence.ToLowerInvariant();
+                var sentenceLower = RemoveDiacritics(sentence).ToLowerInvariant();
                 int keywordHits = keywords.Count(kw => sentenceLower.Contains(kw));
                 return (Score: keywordHits, Index: originalIndex, Sentence: sentence);
             })
@@ -294,6 +375,31 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             }
 
             return scored;
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            string normalizedString = text.Normalize(System.Text.NormalizationForm.FormD);
+            var stringBuilder = new System.Text.StringBuilder();
+
+            foreach (char c in normalizedString)
+            {
+                var unicodeCategory = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != System.Globalization.UnicodeCategory.NonSpacingMark)
+                {
+                    if (c == 'đ')
+                        stringBuilder.Append('d');
+                    else if (c == 'Đ')
+                        stringBuilder.Append('D');
+                    else
+                        stringBuilder.Append(c);
+                }
+            }
+
+            return stringBuilder.ToString().Normalize(System.Text.NormalizationForm.FormC);
         }
     }
 }
