@@ -584,9 +584,8 @@
                 sourcesDiv.innerHTML += `
                     <div class="source-tag" onclick="showSourceDetails('${src.documentTitle}', ${src.pageNumber}, ${src.similarityScore}, '${cleanSnippet}')">
                         <i class="bi bi-file-earmark-text-fill"></i>
-                        <span>${src.documentTitle.length > 15 ? src.documentTitle.substring(0, 12) + '...' : src.documentTitle}</span>
+                        <span>${src.documentTitle.length > 35 ? src.documentTitle.substring(0, 32) + '...' : src.documentTitle}</span>
                         ${src.pageNumber ? `<span class="text-secondary small">(Tr.${src.pageNumber})</span>` : ''}
-                        <span class="source-score">${src.similarityScore.toFixed(0)}%</span>
                     </div>
                 `;
             });

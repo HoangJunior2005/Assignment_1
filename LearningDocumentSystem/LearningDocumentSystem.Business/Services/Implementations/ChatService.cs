@@ -125,6 +125,17 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 }
 
                 response.Answer = await _geminiService.GenerateAnswerAsync(question, contextBuilder.ToString());
+
+                if (!string.IsNullOrEmpty(response.Answer) && 
+                    (response.Answer.Contains("không tìm thấy", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("chưa được cấu hình", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("đã xảy ra lỗi", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("lỗi nội bộ", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("không nhận được", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("không thể trích xuất", StringComparison.OrdinalIgnoreCase)))
+                {
+                    response.Sources.Clear();
+                }
             }
             catch (Exception ex)
             {
