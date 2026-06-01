@@ -19,6 +19,11 @@
                     @Html.AntiForgeryToken()
                     @if (isEdit) { <input type="hidden" asp-for="ChapterID"/> }
 
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
+                    }
+
                     <div class="mb-4">
                         <label asp-for="SubjectID" class="form-label fw-semibold">Môn học</label>
                         <select asp-for="SubjectID" class="form-select form-select-lg">

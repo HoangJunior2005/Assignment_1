@@ -121,6 +121,7 @@ namespace LearningDocumentSystem.Data.DbContexts
                 entity.Property(d => d.IndexStatus).HasMaxLength(20).HasDefaultValue("Pending");
                 entity.Property(d => d.UploadedAt).HasDefaultValueSql("GETDATE()");
                 entity.Property(d => d.IndexedAt).HasColumnType("datetime2");
+                entity.Property(d => d.FileHash).HasMaxLength(64).IsRequired(false);
 
                 // FK → Chapters (CASCADE)
                 entity.HasOne(d => d.Chapter)
@@ -136,6 +137,7 @@ namespace LearningDocumentSystem.Data.DbContexts
 
                 entity.HasIndex(d => d.ChapterID).HasDatabaseName("IX_Documents_ChapterID");
                 entity.HasIndex(d => d.UploadedBy).HasDatabaseName("IX_Documents_UploadedBy");
+                entity.HasIndex(d => d.FileHash).HasDatabaseName("IX_Documents_FileHash");
             });
 
             // ============================================================

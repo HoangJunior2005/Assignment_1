@@ -18,6 +18,11 @@
                 <form asp-action="@(isEdit ? "Edit" : "Create")" method="post">
                     @Html.AntiForgeryToken()
                     @if (isEdit) { <input type="hidden" asp-for="SubjectID"/> }
+                    
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4"></div>
+                    }
 
                     <div class="mb-4">
                         <label asp-for="SubjectName" class="form-label fw-semibold"></label>

@@ -7,6 +7,7 @@ using LearningDocumentSystem.Common.Helpers;
 using LearningDocumentSystem.Data.Repositories.Interfaces;
 using LearningDocumentSystem.Entities.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace LearningDocumentSystem.Business.Services.Implementations
@@ -66,6 +67,16 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             var chapter = await _uow.Chapters.GetByIdAsync(chapterId)
                 ?? throw new NotFoundException("Chapter", chapterId);
 
+            // Tính toán mã băm SHA256 của tệp tin tải lên
+            var hash = await ComputeFileHashAsync(file);
+
+            // Kiểm tra trùng lặp tệp
+            var isDuplicate = await _uow.Documents.AnyAsync(d => d.FileHash == hash);
+            if (isDuplicate)
+            {
+                throw new InvalidOperationException("Tài liệu này đã được tải lên hệ thống trước đó (trùng khớp nội dung tệp tin).");
+            }
+
             // Step 1: Lưu file vật lý
             await _uow.BeginTransactionAsync();
             try
@@ -82,7 +93,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                     FileSizeInBytes = file.Length,
                     IndexStatus    = AppConstants.StatusPending,
                     UploadedBy     = uploadedByUserId,
-                    UploadedAt     = DateTime.UtcNow
+                    UploadedAt     = DateTime.UtcNow,
+                    FileHash       = hash
                 };
                 await _uow.Documents.AddAsync(document);
                 await _uow.SaveChangesAsync();
@@ -186,6 +198,14 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 FailedDocuments   = failed,
                 RecentDocuments   = _mapper.Map<List<DocumentDto>>(recent)
             };
+        }
+
+        private static async Task<string> ComputeFileHashAsync(IFormFile file)
+        {
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            using var stream = file.OpenReadStream();
+            var hashBytes = await sha256.ComputeHashAsync(stream);
+            return Convert.ToHexString(hashBytes).ToLowerInvariant();
         }
     }
 }
