@@ -1,0 +1,107 @@
+@model LearningDocumentSystem.Web.ViewModels.UserRoleManageViewModel
+@using LearningDocumentSystem.Common.Constants
+@{
+    ViewData["Title"] = "Quản lý quyền";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-people-fill me-2"></i>Quản lý quyền</h1>
+        <p class="page-subtitle">Cấp quyền cho tài khoản đã tồn tại</p>
+    </div>
+</div>
+
+<div class="card-custom">
+    <div class="card-custom-body p-0">
+        @if (!Model.Users.Any())
+        {
+            <div class="empty-state py-5">
+                <i class="bi bi-people"></i>
+                <p>Không có tài khoản nào</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-clean mb-0 align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                        <tr>
+                            <th>#</th>
+                            <th>Tài khoản</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Trạng thái</th>
+                            <th>Quyền</th>
+                            <th class="text-end">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int i = 1; }
+                        @foreach (var u in Model.Users)
+                        {
+                            <tr>
+                                <td class="text-muted">@(i++)</td>
+                                <td class="fw-semibold">@u.Username</td>
+                                <td>@u.FullName</td>
+                                <td>@u.Email</td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Khóa</span>
+                                    }
+                                </td>
+                                <td>
+                                    @{
+                                        var isAdminUser = u.Roles.Contains(AppConstants.RoleAdmin);
+                                        var formId = $"roleForm_{u.UserID}";
+                                    }
+                                    @if (isAdminUser)
+                                    {
+                                        <div class="text-muted small">
+                                            Hiện tại: @string.Join(", ", u.Roles)
+                                        </div>
+                                        <span class="badge bg-secondary-subtle text-secondary">Không chỉnh quyền Admin</span>
+                                    }
+                                    else
+                                    {
+                                        <form asp-action="UpdateRoles" method="post" id="@formId">
+                                            @Html.AntiForgeryToken()
+                                            @Html.Hidden("userId", u.UserID)
+                                            <div class="text-muted small mb-1">
+                                                Hiện tại: @string.Join(", ", u.Roles)
+                                            </div>
+                                            <select class="form-select form-select-sm" name="roleIds">
+                                                @foreach (var role in Model.Roles)
+                                                {
+                                                    if (role.RoleName == AppConstants.RoleAdmin)
+                                                    {
+                                                        continue;
+                                                    }
+
+                                                    var isAssigned = u.AssignedRoleIds.Contains(role.RoleID);
+                                                    <option value="@role.RoleID" selected="@(isAssigned)">@role.RoleName</option>
+                                                }
+                                            </select>
+                                        </form>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (!isAdminUser)
+                                    {
+                                        <button type="submit" form="@formId" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-save me-1"></i>Lưu
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

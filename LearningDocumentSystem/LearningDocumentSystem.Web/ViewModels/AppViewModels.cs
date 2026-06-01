@@ -68,6 +68,26 @@ namespace LearningDocumentSystem.Web.ViewModels
         public IEnumerable<SubjectDto> Subjects { get; set; } = [];
     }
 
+    // ============================================================
+    // ADMIN - USER ROLES
+    // ============================================================
+    public class UserRoleItemViewModel
+    {
+        public int UserID { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public List<string> Roles { get; set; } = new();
+        public List<int> AssignedRoleIds { get; set; } = new();
+    }
+
+    public class UserRoleManageViewModel
+    {
+        public IEnumerable<UserRoleItemViewModel> Users { get; set; } = [];
+        public IEnumerable<RoleDto> Roles { get; set; } = [];
+    }
+
     public class SubjectFormViewModel
     {
         public int SubjectID { get; set; }

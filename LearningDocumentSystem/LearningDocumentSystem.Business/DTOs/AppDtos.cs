@@ -29,6 +29,12 @@ namespace LearningDocumentSystem.Business.DTOs
         public List<string> Roles { get; set; } = new();
     }
 
+    public class RoleDto
+    {
+        public int RoleID { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+    }
+
     // ================================================================
     // SUBJECT DTOs
     // ================================================================
@@ -144,6 +150,14 @@ namespace LearningDocumentSystem.Business.DTOs
         public string ContentSnippet { get; set; } = string.Empty;
     }
 
+    public class MonthlyUploadDto
+    {
+        public int Year { get; set; }
+        public int Month { get; set; }
+        public string Label => $"{Month:D2}/{Year}";
+        public int Count { get; set; }
+    }
+
     public class DashboardDto
     {
         public int TotalDocuments { get; set; }
@@ -155,5 +169,6 @@ namespace LearningDocumentSystem.Business.DTOs
         public int ProcessingDocuments { get; set; }
         public int FailedDocuments { get; set; }
         public List<DocumentDto> RecentDocuments { get; set; } = new();
+        public List<MonthlyUploadDto> MonthlyUploads { get; set; } = new();
     }
 }

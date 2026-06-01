@@ -186,6 +186,27 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
             var (recent, _) = await _uow.Documents.GetPagedAsync(null, null, null, null, 1, 5);
 
+            // Monthly uploads - last 12 months
+            var now = DateTime.UtcNow;
+            var twelveMonthsAgo = new DateTime(now.Year, now.Month, 1).AddMonths(-11);
+            var allDocs = await _uow.Documents.FindAsync(d => d.UploadedAt >= twelveMonthsAgo);
+            var uploadGroups = allDocs
+                .GroupBy(d => new { d.UploadedAt.Year, d.UploadedAt.Month })
+                .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.Count());
+
+            var monthlyUploads = new List<DTOs.MonthlyUploadDto>();
+            for (int i = 0; i < 12; i++)
+            {
+                var date = twelveMonthsAgo.AddMonths(i);
+                var count = uploadGroups.GetValueOrDefault((date.Year, date.Month), 0);
+                monthlyUploads.Add(new DTOs.MonthlyUploadDto
+                {
+                    Year = date.Year,
+                    Month = date.Month,
+                    Count = count
+                });
+            }
+
             return new DashboardDto
             {
                 TotalDocuments    = totalDocs,
@@ -196,7 +217,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 PendingDocuments  = pending,
                 ProcessingDocuments = processing,
                 FailedDocuments   = failed,
-                RecentDocuments   = _mapper.Map<List<DocumentDto>>(recent)
+                RecentDocuments   = _mapper.Map<List<DocumentDto>>(recent),
+                MonthlyUploads    = monthlyUploads
             };
         }
 

@@ -9,6 +9,13 @@ namespace LearningDocumentSystem.Business.Services.Interfaces
         Task<bool> IsUsernameAvailableAsync(string username);
     }
 
+    public interface IAdminUserService
+    {
+        Task<IEnumerable<UserDto>> GetAllUsersAsync();
+        Task<IEnumerable<RoleDto>> GetAllRolesAsync();
+        Task UpdateUserRolesAsync(int userId, IEnumerable<int> roleIds);
+    }
+
     public interface ISubjectService
     {
         Task<IEnumerable<SubjectDto>> GetAllAsync();

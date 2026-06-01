@@ -48,6 +48,23 @@
     </div>
 </div>
 
+<!-- Monthly Upload Chart -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card-custom">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-graph-up-arrow me-2"></i>Tài liệu upload hàng tháng</h5>
+                <span class="badge bg-primary-subtle text-primary">12 tháng gần nhất</span>
+            </div>
+            <div class="card-custom-body">
+                <div style="position: relative; height: 300px;">
+                    <canvas id="monthlyUploadChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Index Status + Recent Docs -->
 <div class="row g-4">
     <div class="col-lg-5">
@@ -153,3 +170,86 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('monthlyUploadChart').getContext('2d');
+
+            const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyUploads.Select(m => m.Label)));
+            const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyUploads.Select(m => m.Count)));
+
+            // Create gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(99, 102, 241, 0.8)');
+            gradient.addColorStop(1, 'rgba(99, 102, 241, 0.1)');
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Số tài liệu',
+                        data: data,
+                        backgroundColor: gradient,
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        hoverBackgroundColor: 'rgba(99, 102, 241, 0.95)',
+                        hoverBorderColor: 'rgba(79, 70, 229, 1)',
+                        hoverBorderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(99, 102, 241, 0.5)',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(items) { return 'Tháng ' + items[0].label; },
+                                label: function(item) { return item.raw + ' tài liệu được upload'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: '#94a3b8',
+                                font: { size: 12, family: 'Inter' }
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.1)',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 11, family: 'Inter' }
+                            },
+                            grid: { display: false }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        });
+    </script>
+}
+

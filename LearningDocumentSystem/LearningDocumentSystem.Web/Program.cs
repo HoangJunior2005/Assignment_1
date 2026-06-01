@@ -65,6 +65,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Business layer
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<IFileService, FileService>();

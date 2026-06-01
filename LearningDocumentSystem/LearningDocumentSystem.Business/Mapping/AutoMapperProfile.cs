@@ -14,6 +14,8 @@ namespace LearningDocumentSystem.Business.Mapping
                 .ForMember(dest => dest.Roles,
                     opt => opt.MapFrom(src => src.UserRoles.Select(ur => ur.Role.RoleName).ToList()));
 
+            CreateMap<Role, RoleDto>();
+
             // Subject
             CreateMap<Subject, SubjectDto>()
                 .ForMember(dest => dest.ChapterCount,
