@@ -11,6 +11,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
     {
         private readonly IUnitOfWork _uow;
         private readonly IEmbeddingService _embeddingService;
+        private readonly IGeminiService _geminiService;
         private readonly ILogger<ChatService> _logger;
 
         private const int ExpectedDimension = 512;
@@ -18,10 +19,12 @@ namespace LearningDocumentSystem.Business.Services.Implementations
         public ChatService(
             IUnitOfWork uow,
             IEmbeddingService embeddingService,
+            IGeminiService geminiService,
             ILogger<ChatService> logger)
         {
             _uow = uow;
             _embeddingService = embeddingService;
+            _geminiService = geminiService;
             _logger = logger;
         }
 
@@ -102,6 +105,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                     return response;
                 }
 
+                var contextBuilder = new System.Text.StringBuilder();
+
                 foreach (var item in validChunks)
                 {
                     var source = new ChatSourceDto
@@ -115,9 +120,11 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                             : item.Chunk.ContentText
                     };
                     response.Sources.Add(source);
+                    
+                    contextBuilder.AppendLine($"[Tài liệu: {source.DocumentTitle}, Trang {source.PageNumber?.ToString() ?? "N/A"}]: {item.Chunk.ContentText}");
                 }
 
-                response.Answer = GenerateAnswerFromContext(question, validChunks);
+                response.Answer = await _geminiService.GenerateAnswerAsync(question, contextBuilder.ToString());
             }
             catch (Exception ex)
             {

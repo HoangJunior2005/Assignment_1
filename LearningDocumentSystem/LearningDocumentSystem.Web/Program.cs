@@ -71,6 +71,7 @@ builder.Services.AddScoped<IFileService, FileService>();
 builder.Services.AddScoped<IChunkingService, ChunkingService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddHttpClient<IGeminiService, GeminiService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 
 // Seeder
