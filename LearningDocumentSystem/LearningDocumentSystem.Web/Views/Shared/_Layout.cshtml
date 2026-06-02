@@ -70,6 +70,42 @@
                     </li>
                 }
 
+                @if (User.IsInRole("Teacher") || User.IsInRole("Student"))
+                {
+                    <li class="menu-section">Quản lý nội dung</li>
+                    <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Subject" ? "active" : "")">
+                        <a asp-controller="Subject" asp-action="Index">
+                            <i class="bi bi-book-fill"></i> Môn học
+                        </a>
+                    </li>
+                    <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Chapter" ? "active" : "")">
+                        <a asp-controller="Chapter" asp-action="Index">
+                            <i class="bi bi-journal-bookmark-fill"></i> Chương học
+                        </a>
+                    </li>
+                    <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Document" ? "active" : "")">
+                        <a asp-controller="Document" asp-action="Index">
+                            <i class="bi bi-file-earmark-text-fill"></i> Tài liệu
+                        </a>
+                    </li>
+
+                    <li class="menu-section">Trợ lý AI</li>
+                    <li class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Chat" ? "active" : "")">
+                        <a asp-controller="Chat" asp-action="Index">
+                            <i class="bi bi-robot"></i> Hỏi đáp AI
+                        </a>
+                    </li>
+                }
+
+                @if (User.IsInRole("Teacher"))
+                {
+                    <li class="menu-section">Thao tác</li>
+                    <li class="@(ViewContext.RouteData.Values["action"]?.ToString() == "Upload" ? "active" : "")">
+                        <a asp-controller="Document" asp-action="Upload">
+                            <i class="bi bi-cloud-arrow-up-fill"></i> Upload tài liệu
+                        </a>
+                    </li>
+                }
 
             </ul>
 
