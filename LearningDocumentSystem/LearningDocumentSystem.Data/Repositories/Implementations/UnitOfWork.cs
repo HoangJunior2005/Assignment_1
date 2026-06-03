@@ -19,7 +19,7 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
         private IDocumentRepository? _documents;
         private IDocumentChunkRepository? _documentChunks;
         private IEmbeddingRepository? _embeddings;
-        private IAllowedEmailRepository? _allowedEmails;
+        private IStudentRegistryRepository? _studentRegistries;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -34,7 +34,8 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
         public IDocumentRepository Documents => _documents ??= new DocumentRepository(_context);
         public IDocumentChunkRepository DocumentChunks => _documentChunks ??= new DocumentChunkRepository(_context);
         public IEmbeddingRepository Embeddings => _embeddings ??= new EmbeddingRepository(_context);
-        public IAllowedEmailRepository AllowedEmails => _allowedEmails ??= new AllowedEmailRepository(_context);
+        public IStudentRegistryRepository StudentRegistries =>
+            _studentRegistries ??= new StudentRegistryRepository(_context);
 
         public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
 

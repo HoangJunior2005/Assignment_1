@@ -25,23 +25,30 @@ namespace LearningDocumentSystem.Business.DTOs
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public bool IsActive { get; set; }
-        public bool CanUpload { get; set; }
+        public int? SchoolID { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<string> Roles { get; set; } = new();
     }
 
-    public class RoleDto
+    public class RegisterStudentDto
     {
-        public int RoleID { get; set; }
-        public string RoleName { get; set; } = string.Empty;
-    }
+        [Required(ErrorMessage = "Vui lòng nhập MSSV")]
+        [MaxLength(50, ErrorMessage = "MSSV tối đa 50 ký tự")]
+        public string StudentCode { get; set; } = string.Empty;
 
-    public class AllowedEmailDto
-    {
-        public int Id { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public bool IsUsed { get; set; }
-        public DateTime CreatedAt { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập họ tên")]
+        [MaxLength(100, ErrorMessage = "Họ tên tối đa 100 ký tự")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
+        [MinLength(6, ErrorMessage = "Mật khẩu tối thiểu 6 ký tự")]
+        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d).{6,}$",
+            ErrorMessage = "Mật khẩu quá yếu. Mật khẩu cần ít nhất 6 ký tự, gồm chữ và số.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng xác nhận mật khẩu")]
+        [Compare(nameof(Password), ErrorMessage = "Mật khẩu xác nhận không khớp")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 
     // ================================================================
@@ -159,14 +166,6 @@ namespace LearningDocumentSystem.Business.DTOs
         public string ContentSnippet { get; set; } = string.Empty;
     }
 
-    public class MonthlyUploadDto
-    {
-        public int Year { get; set; }
-        public int Month { get; set; }
-        public string Label => $"{Month:D2}/{Year}";
-        public int Count { get; set; }
-    }
-
     public class DashboardDto
     {
         public int TotalDocuments { get; set; }
@@ -178,6 +177,5 @@ namespace LearningDocumentSystem.Business.DTOs
         public int ProcessingDocuments { get; set; }
         public int FailedDocuments { get; set; }
         public List<DocumentDto> RecentDocuments { get; set; } = new();
-        public List<MonthlyUploadDto> MonthlyUploads { get; set; } = new();
     }
 }

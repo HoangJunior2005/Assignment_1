@@ -20,7 +20,7 @@
         <a asp-action="Download" asp-route-id="@Model.DocumentID" class="btn btn-primary">
             <i class="bi bi-cloud-download-fill me-1"></i>Tải xuống
         </a>
-        @if (User.IsInRole("Teacher"))
+        @if (User.IsInRole("Admin") || User.IsInRole("Teacher"))
         {
             <button type="button" class="btn btn-danger"
                     onclick="confirmDelete(@Model.DocumentID, '@Model.Title')">
@@ -154,17 +154,17 @@
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header border-0 bg-danger text-white justify-content-center position-relative">
-                <h5 class="modal-title m-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
-                <button type="button" class="btn-close btn-close-white position-absolute" style="right: 1.25rem; top: 1.25rem;" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body py-4 text-center">
+            <div class="modal-body py-4">
                 <p>Bạn có chắc muốn xóa tài liệu: <strong class="text-danger" id="deleteDocTitle"></strong>?</p>
-                <p class="text-muted small mb-0">Thao tác này sẽ xóa tất cả @Model.ChunkCount chunks và embeddings.</p>
+                <p class="text-muted small">Thao tác này sẽ xóa tất cả @Model.ChunkCount chunks và embeddings.</p>
             </div>
-            <div class="modal-footer border-0 justify-content-center">
-                <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Hủy</button>
-                <form id="deleteForm" method="post" class="d-inline">
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form id="deleteForm" method="post">
                     @Html.AntiForgeryToken()
                     <button type="submit" class="btn btn-danger"><i class="bi bi-trash-fill me-1"></i>Xóa</button>
                 </form>

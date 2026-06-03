@@ -10,5 +10,12 @@ namespace LearningDocumentSystem.Common.Constants
         public const string MsgNotFound         = "Không tìm thấy tài nguyên.";
         public const string MsgLoginFailed      = "Tên đăng nhập hoặc mật khẩu không đúng.";
         public const string MsgAccessDenied     = "Bạn không có quyền thực hiện thao tác này.";
+
+        public const string MsgStudentCodeNotFound   = "MSSV không thuộc trường";
+        public const string MsgStudentAlreadyExists  = "Tài khoản đã tồn tại";
+        public const string MsgStudentInfoInvalid    = "Thông tin sinh viên không hợp lệ";
+        public const string MsgPasswordWeak          = "Mật khẩu quá yếu. Mật khẩu cần ít nhất 6 ký tự, gồm chữ và số.";
+        public const string MsgPasswordMismatch      = "Mật khẩu xác nhận không khớp";
+        public const string MsgRegisterSuccess       = "Đăng kí thành công";
     }
 }

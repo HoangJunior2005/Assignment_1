@@ -12,7 +12,7 @@ namespace LearningDocumentSystem.Data.Repositories.Interfaces
         IDocumentRepository Documents { get; }
         IDocumentChunkRepository DocumentChunks { get; }
         IEmbeddingRepository Embeddings { get; }
-        IAllowedEmailRepository AllowedEmails { get; }
+        IStudentRegistryRepository StudentRegistries { get; }
 
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

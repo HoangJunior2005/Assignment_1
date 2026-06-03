@@ -27,12 +27,15 @@ namespace LearningDocumentSystem.Entities.Models
 
         public bool IsActive { get; set; } = true;
 
-        public bool CanUpload { get; set; } = true;
+        [Column("SchoolID")]
+        public int? SchoolID { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
+        public virtual School? School { get; set; }
         public virtual ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
         public virtual ICollection<Document> Documents { get; set; } = new List<Document>();
+        public virtual StudentRegistry? StudentRegistry { get; set; }
     }
 }

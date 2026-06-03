@@ -7,7 +7,6 @@ namespace LearningDocumentSystem.Data.Repositories.Interfaces
         Task<User?> GetByUsernameAsync(string username);
         Task<User?> GetByEmailAsync(string email);
         Task<User?> GetWithRolesAsync(int userId);
-        Task<IEnumerable<User>> GetAllWithRolesAsync();
         Task<IEnumerable<string>> GetUserRolesAsync(int userId);
         Task<bool> IsUsernameExistsAsync(string username);
         Task<bool> IsEmailExistsAsync(string email);

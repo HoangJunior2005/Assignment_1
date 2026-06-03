@@ -16,7 +16,8 @@ namespace LearningDocumentSystem.Data.DbContexts
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<DocumentChunk> DocumentChunks { get; set; } = null!;
         public DbSet<Embedding> Embeddings { get; set; } = null!;
-        public DbSet<AllowedEmail> AllowedEmails { get; set; } = null!;
+        public DbSet<School> Schools { get; set; } = null!;
+        public DbSet<StudentRegistry> StudentRegistries { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -37,22 +38,50 @@ namespace LearningDocumentSystem.Data.DbContexts
                 entity.Property(u => u.Email).IsRequired().HasMaxLength(100);
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.Property(u => u.IsActive).HasDefaultValue(true);
-                entity.Property(u => u.CanUpload).HasDefaultValue(true);
                 entity.Property(u => u.CreatedAt).HasDefaultValueSql("GETDATE()");
+
+                entity.HasOne(u => u.School)
+                    .WithMany(s => s.Users)
+                    .HasForeignKey(u => u.SchoolID)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // ============================================================
-            // BẢNG AllowedEmails
+            // BẢNG Schools
             // ============================================================
-            modelBuilder.Entity<AllowedEmail>(entity =>
+            modelBuilder.Entity<School>(entity =>
             {
-                entity.ToTable("AllowedEmails");
-                entity.HasKey(ae => ae.Id);
-                entity.Property(ae => ae.Id).UseIdentityColumn();
-                entity.Property(ae => ae.Email).IsRequired().HasMaxLength(100);
-                entity.HasIndex(ae => ae.Email).IsUnique();
-                entity.Property(ae => ae.IsUsed).HasDefaultValue(false);
-                entity.Property(ae => ae.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.ToTable("Schools");
+                entity.HasKey(s => s.SchoolID);
+                entity.Property(s => s.SchoolID).UseIdentityColumn();
+                entity.Property(s => s.SchoolName).IsRequired().HasMaxLength(200).IsUnicode(true);
+                entity.Property(s => s.SchoolCode).IsRequired().HasMaxLength(50);
+                entity.HasIndex(s => s.SchoolCode).IsUnique();
+            });
+
+            // ============================================================
+            // BẢNG StudentRegistries
+            // ============================================================
+            modelBuilder.Entity<StudentRegistry>(entity =>
+            {
+                entity.ToTable("StudentRegistries");
+                entity.HasKey(r => r.RegistryID);
+                entity.Property(r => r.RegistryID).UseIdentityColumn();
+                entity.Property(r => r.StudentCode).IsRequired().HasMaxLength(50);
+                entity.HasIndex(r => r.StudentCode).IsUnique();
+                entity.Property(r => r.FullName).IsRequired().HasMaxLength(100).IsUnicode(true);
+                entity.Property(r => r.IsActivated).HasDefaultValue(false);
+                entity.Property(r => r.ActivatedAt).HasColumnType("datetime2");
+
+                entity.HasOne(r => r.School)
+                    .WithMany(s => s.StudentRegistries)
+                    .HasForeignKey(r => r.SchoolID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.User)
+                    .WithOne(u => u.StudentRegistry)
+                    .HasForeignKey<StudentRegistry>(r => r.UserID)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // ============================================================

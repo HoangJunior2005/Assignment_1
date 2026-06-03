@@ -25,6 +25,8 @@ namespace LearningDocumentSystem.Data.Seeders
                 await _context.Database.MigrateAsync();
 
                 await SeedRolesAsync();
+                await SeedSchoolsAsync();
+                await SeedStudentRegistriesAsync();
                 await SeedUsersAsync();
                 await SeedSubjectsAsync();
                 await _context.SaveChangesAsync();
@@ -53,11 +55,62 @@ namespace LearningDocumentSystem.Data.Seeders
             await _context.SaveChangesAsync(); // Save để lấy RoleID
         }
 
+        private async Task SeedSchoolsAsync()
+        {
+            if (await _context.Schools.AnyAsync()) return;
+
+            _logger.LogInformation("Seeding schools...");
+            await _context.Schools.AddAsync(new School
+            {
+                SchoolName = "Trường Đại học Công nghệ",
+                SchoolCode = "UNI-TECH"
+            });
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task SeedStudentRegistriesAsync()
+        {
+            if (await _context.StudentRegistries.AnyAsync()) return;
+
+            _logger.LogInformation("Seeding student registry...");
+            var school = await _context.Schools.FirstAsync();
+
+            var registries = new List<StudentRegistry>
+            {
+                new()
+                {
+                    StudentCode = "SE123456",
+                    FullName    = "Nguyen Van A",
+                    SchoolID    = school.SchoolID,
+                    IsActivated = false
+                },
+                new()
+                {
+                    StudentCode = "SE171001",
+                    FullName    = "Tran Manh Sinh Vien",
+                    SchoolID    = school.SchoolID,
+                    IsActivated = false
+                },
+                new()
+                {
+                    StudentCode = "SE654321",
+                    FullName    = "Le Thi B",
+                    SchoolID    = school.SchoolID,
+                    IsActivated = false
+                }
+            };
+
+            await _context.StudentRegistries.AddRangeAsync(registries);
+            await _context.SaveChangesAsync();
+        }
+
         private async Task SeedUsersAsync()
         {
             if (await _context.Users.AnyAsync()) return;
 
             _logger.LogInformation("Seeding users...");
+
+            var school = await _context.Schools.FirstOrDefaultAsync();
 
             var adminRole   = await _context.Roles.FirstAsync(r => r.RoleName == "Admin");
             var teacherRole = await _context.Roles.FirstAsync(r => r.RoleName == "Teacher");
@@ -73,7 +126,6 @@ namespace LearningDocumentSystem.Data.Seeders
                     FullName     = "Quản Trị Viên",
                     Email        = "admin@university.edu.vn",
                     IsActive     = true,
-                    CanUpload    = true,
                     CreatedAt    = DateTime.UtcNow
                 },
                 new()
@@ -84,16 +136,15 @@ namespace LearningDocumentSystem.Data.Seeders
                     FullName     = "Nguyễn Văn Giảng Viên",
                     Email        = "teacher@university.edu.vn",
                     IsActive     = true,
-                    CanUpload    = true,
                     CreatedAt    = DateTime.UtcNow
                 },
                 new()
                 {
-                    // Theo seed data trong file Word
                     Username     = "tranmanh_sv",
                     PasswordHash = PasswordHelper.HashPassword("Student@123"),
                     FullName     = "Trần Mạnh Sinh Viên",
                     Email        = "student@student.edu.vn",
+                    SchoolID     = school?.SchoolID,
                     IsActive     = true,
                     CreatedAt    = DateTime.UtcNow
                 }
@@ -115,6 +166,16 @@ namespace LearningDocumentSystem.Data.Seeders
             };
             await _context.UserRoles.AddRangeAsync(userRoles);
             await _context.SaveChangesAsync();
+
+            var registry = await _context.StudentRegistries
+                .FirstOrDefaultAsync(r => r.StudentCode == "SE171001");
+            if (registry != null && !registry.IsActivated)
+            {
+                registry.IsActivated = true;
+                registry.ActivatedAt = DateTime.UtcNow;
+                registry.UserID = student.UserID;
+                await _context.SaveChangesAsync();
+            }
         }
 
         private async Task SeedSubjectsAsync()

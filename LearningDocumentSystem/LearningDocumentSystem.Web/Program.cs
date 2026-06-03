@@ -7,6 +7,7 @@ using LearningDocumentSystem.Data.Repositories.Implementations;
 using LearningDocumentSystem.Data.Repositories.Interfaces;
 using LearningDocumentSystem.Data.Seeders;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,13 +37,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly",        p => p.RequireRole(AppConstants.RoleAdmin));
-    options.AddPolicy("TeacherUp",        p => p.RequireAssertion(context =>
-        context.User.IsInRole(AppConstants.RoleAdmin) ||
-        (context.User.IsInRole(AppConstants.RoleTeacher) && context.User.HasClaim(c => c.Type == "CanUpload" && c.Value == "True"))
-    ));
-    options.AddPolicy("TeacherOrStudent", p => p.RequireRole(AppConstants.RoleTeacher, AppConstants.RoleStudent));
-    options.AddPolicy("AllUsers",        p => p.RequireAuthenticatedUser());
+    options.AddPolicy("AdminOnly",   p => p.RequireRole(AppConstants.RoleAdmin));
+    options.AddPolicy("TeacherUp",  p => p.RequireRole(AppConstants.RoleAdmin, AppConstants.RoleTeacher));
+    options.AddPolicy("AllUsers",   p => p.RequireAuthenticatedUser());
 });
 
 // ============================================================
@@ -69,7 +66,6 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Business layer
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IChapterService, ChapterService>();
 builder.Services.AddScoped<IFileService, FileService>();
@@ -86,7 +82,24 @@ builder.Services.AddScoped<DataSeeder>();
 // 6. MVC
 // ============================================================
 builder.Services.AddControllersWithViews()
-    .AddRazorRuntimeCompilation();
+    .AddRazorRuntimeCompilation()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy =
+            System.Text.Json.JsonNamingPolicy.CamelCase;
+    });
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var message = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .FirstOrDefault() ?? "Dữ liệu không hợp lệ.";
+        return new BadRequestObjectResult(new { message });
+    };
+});
 
 // Configure upload file size limit (50MB)
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
@@ -147,6 +160,7 @@ app.UseAuthorization();
 app.UseSession();
 
 // Routes
+app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

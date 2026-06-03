@@ -1,13 +1,17 @@
+using LearningDocumentSystem.Business.DTOs;
 using LearningDocumentSystem.Business.Services.Interfaces;
 using LearningDocumentSystem.Common.Constants;
+using LearningDocumentSystem.Common.Exceptions;
 using LearningDocumentSystem.Web.ViewModels;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace LearningDocumentSystem.Web.Controllers
 {
+    [AllowAnonymous]
     public class AccountController : Controller
     {
         private readonly IAuthService _authService;
@@ -42,31 +46,7 @@ namespace LearningDocumentSystem.Web.Controllers
                 return View(model);
             }
 
-            // Tạo claims cho Cookie Authentication
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
-                new(ClaimTypes.Name, user.Username),
-                new("FullName", user.FullName),
-                new(ClaimTypes.Email, user.Email),
-                new("CanUpload", user.CanUpload.ToString())
-            };
-
-            // Thêm role claims
-            foreach (var role in user.Roles)
-                claims.Add(new Claim(ClaimTypes.Role, role));
-
-            var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var principal = new ClaimsPrincipal(identity);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                principal,
-                new AuthenticationProperties
-                {
-                    IsPersistent = model.RememberMe,
-                    ExpiresUtc   = DateTimeOffset.UtcNow.AddHours(8)
-                });
+            await SignInUserAsync(user, model.RememberMe);
 
             _logger.LogInformation("User {Username} logged in.", user.Username);
 
@@ -74,6 +54,46 @@ namespace LearningDocumentSystem.Web.Controllers
                 return Redirect(returnUrl);
 
             return RedirectToAction("Index", "Home");
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Index", "Home");
+
+            return View(new RegisterStudentViewModel());
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterStudentViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                var dto = new RegisterStudentDto
+                {
+                    StudentCode     = model.StudentCode,
+                    FullName        = model.FullName,
+                    Password        = model.Password,
+                    ConfirmPassword = model.ConfirmPassword
+                };
+
+                var user = await _authService.RegisterStudentAsync(dto);
+                await SignInUserAsync(user, rememberMe: false);
+
+                _logger.LogInformation("Student {StudentCode} registered and signed in.", user.Username);
+                TempData["Success"] = AppMessages.MsgRegisterSuccess;
+                return RedirectToAction("Index", "Home");
+            }
+            catch (BusinessException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return View(model);
+            }
         }
 
         [HttpPost]
@@ -85,47 +105,35 @@ namespace LearningDocumentSystem.Web.Controllers
             return RedirectToAction("Login");
         }
 
-        [HttpGet]
-        public IActionResult Register()
-        {
-            if (User.Identity?.IsAuthenticated == true)
-                return RedirectToAction("Index", "Home");
-
-            return View();
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
-        {
-            if (!ModelState.IsValid) return View(model);
-
-            try
-            {
-                await _authService.RegisterAsync(model.Email, model.Password);
-                TempData["Success"] = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
-                return RedirectToAction("Login");
-            }
-            catch (ArgumentException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Registration failed for {Email}.", model.Email);
-                ModelState.AddModelError(string.Empty, "Đã xảy ra lỗi hệ thống khi đăng ký.");
-            }
-
-            return View(model);
-        }
-
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+        private async Task SignInUserAsync(UserDto user, bool rememberMe)
+        {
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
+                new(ClaimTypes.Name, user.Username),
+                new("FullName", user.FullName),
+                new(ClaimTypes.Email, user.Email)
+            };
+
+            foreach (var role in user.Roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
+            var identity  = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = rememberMe,
+                    ExpiresUtc   = DateTimeOffset.UtcNow.AddHours(8)
+                });
         }
     }
 }
