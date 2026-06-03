@@ -207,6 +207,25 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 });
             }
 
+            // Monthly registrations - last 12 months
+            var allUsers = await _uow.Users.FindAsync(u => u.CreatedAt >= twelveMonthsAgo);
+            var userGroups = allUsers
+                .GroupBy(u => new { u.CreatedAt.Year, u.CreatedAt.Month })
+                .ToDictionary(g => (g.Key.Year, g.Key.Month), g => g.Count());
+
+            var monthlyRegistrations = new List<DTOs.MonthlyUploadDto>();
+            for (int i = 0; i < 12; i++)
+            {
+                var date = twelveMonthsAgo.AddMonths(i);
+                var count = userGroups.GetValueOrDefault((date.Year, date.Month), 0);
+                monthlyRegistrations.Add(new DTOs.MonthlyUploadDto
+                {
+                    Year = date.Year,
+                    Month = date.Month,
+                    Count = count
+                });
+            }
+
             return new DashboardDto
             {
                 TotalDocuments    = totalDocs,
@@ -218,7 +237,8 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 ProcessingDocuments = processing,
                 FailedDocuments   = failed,
                 RecentDocuments   = _mapper.Map<List<DocumentDto>>(recent),
-                MonthlyUploads    = monthlyUploads
+                MonthlyUploads    = monthlyUploads,
+                MonthlyRegistrations = monthlyRegistrations
             };
         }
 

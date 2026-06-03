@@ -284,6 +284,67 @@
     .hover-white:hover {
         color: #ffffff !important;
     }
+
+    /* Chat lock overlay */
+    .chat-lock-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(6px);
+        border-radius: 16px;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+        opacity: 1;
+        visibility: visible;
+    }
+    .chat-lock-overlay.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+    .chat-lock-icon {
+        width: 68px;
+        height: 68px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
+        animation: lockPulse 2.5s ease-in-out infinite;
+    }
+    @@keyframes lockPulse {
+        0%, 100% { box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35); transform: scale(1); }
+        50% { box-shadow: 0 8px 36px rgba(79, 70, 229, 0.55); transform: scale(1.06); }
+    }
+    .chat-lock-icon i {
+        font-size: 1.8rem;
+        color: white;
+    }
+    .chat-lock-text {
+        text-align: center;
+        max-width: 280px;
+    }
+    .chat-lock-text h6 {
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+        font-size: 1rem;
+    }
+    .chat-lock-text p {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin: 0;
+        line-height: 1.5;
+    }
+    .chat-main {
+        position: relative;
+    }
 </style>
 
 <div class="page-header mb-3">
@@ -345,6 +406,18 @@
     
     <!-- RIGHT MAIN: CHATBOX -->
     <div class="chat-main">
+
+        <!-- Lock overlay: shown until user picks a subject -->
+        <div class="chat-lock-overlay" id="chatLockOverlay">
+            <div class="chat-lock-icon">
+                <i class="bi bi-lock-fill"></i>
+            </div>
+            <div class="chat-lock-text">
+                <h6>Chọn môn học để bắt đầu</h6>
+                <p>Vui lòng chọn <strong>Môn học</strong> ở cột bên trái để AI tìm kiếm đúng tài liệu và trả lời chính xác hơn.</p>
+            </div>
+        </div>
+
         <!-- Header status -->
         <div class="chat-header">
             <div class="chat-header-title d-flex align-items-center gap-3">
@@ -379,8 +452,8 @@
                 @Html.AntiForgeryToken()
                 <div class="chat-input-wrapper">
                     <input type="text" class="chat-input" id="chatInput" 
-                           placeholder="Nhập câu hỏi học tập của bạn tại đây..." autocomplete="off" />
-                    <button type="submit" class="btn-send" id="btnSend">
+                           placeholder="Chọn môn học trước để bắt đầu hỏi..." autocomplete="off" disabled />
+                    <button type="submit" class="btn-send" id="btnSend" disabled>
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
@@ -431,6 +504,25 @@
     // Initial scroll
     scrollToBottom();
 
+    // Toggle chat lock state
+    function setChatLocked(locked) {
+        const overlay = document.getElementById('chatLockOverlay');
+        const input   = document.getElementById('chatInput');
+        const btnSend = document.getElementById('btnSend');
+        if (locked) {
+            overlay.classList.remove('hidden');
+            input.disabled = true;
+            input.placeholder = 'Chọn môn học trước để bắt đầu hỏi...';
+            btnSend.disabled = true;
+        } else {
+            overlay.classList.add('hidden');
+            input.disabled = false;
+            input.placeholder = 'Nhập câu hỏi học tập của bạn tại đây...';
+            btnSend.disabled = false;
+            input.focus();
+        }
+    }
+
     // Load chapters by subject
     function loadChatChapters(subjectId) {
         const select = document.getElementById('chatChapterSelect');
@@ -439,8 +531,12 @@
         
         if (!subjectId) {
             select.innerHTML = '<option value="">— Tất cả chương —</option>';
+            setChatLocked(true);
             return;
         }
+
+        // Unlock chat as soon as a subject is picked
+        setChatLocked(false);
         
         fetch('/Document/GetChapters?subjectId=' + subjectId)
             .then(r => r.json())
@@ -460,6 +556,7 @@
         chapterSelect.innerHTML = '<option value="">— Tất cả chương —</option>';
         chapterSelect.value = '';
         chapterSelect.disabled = true;
+        setChatLocked(true);
     }
 
     // Render basic markdown tags (bold and lists)
