@@ -22,6 +22,11 @@ namespace LearningDocumentSystem.Data.Repositories.Implementations
                 .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.UserID == userId);
 
+        public async Task<IEnumerable<User>> GetAllWithRolesAsync()
+            => await _context.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .ToListAsync();
+
         public async Task<IEnumerable<string>> GetUserRolesAsync(int userId)
             => await _context.UserRoles
                 .Where(ur => ur.UserID == userId)

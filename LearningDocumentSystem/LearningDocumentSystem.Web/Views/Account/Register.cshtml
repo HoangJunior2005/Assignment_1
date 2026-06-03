@@ -1,12 +1,13 @@
+@model LearningDocumentSystem.Web.ViewModels.RegisterViewModel
 @{
-    Layout = null; // No layout for login page
+    Layout = null; // No layout for register page
 }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Đăng nhập — LDS System</title>
+    <title>Đăng ký tài khoản — LDS System</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
@@ -85,13 +86,12 @@
     <div class="auth-right">
         <div class="auth-card">
             <div class="auth-card-header">
-                <h2>Chào mừng trở lại</h2>
-                <p>Đăng nhập để tiếp tục không gian học tập AI</p>
+                <h2>Đăng ký tài khoản</h2>
+                <p>Tham gia không gian học tập tích hợp AI</p>
             </div>
 
-            <form asp-action="Login" method="post" id="loginForm">
+            <form asp-action="Register" method="post" id="registerForm">
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]"/>
 
                 @{
                     var summaryErrors = ViewData.ModelState.Values
@@ -106,91 +106,66 @@
                         <span>@summaryErrors.First()</span>
                     </div>
                 }
-                @if (TempData["Success"] != null)
-                {
-                    <div class="alert alert-success-custom d-flex align-items-center mb-4">
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                        <span>@TempData["Success"]</span>
-                    </div>
-                }
 
-                <!-- Username Input (icon inside) -->
+                <!-- Email Input (icon inside) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" for="Username">Tên đăng nhập</label>
+                    <label class="form-label-custom" asp-for="Email">Địa chỉ Email</label>
                     <div class="input-icon-wrap">
-                        <i class="bi bi-person-fill input-icon"></i>
-                        <input type="text" id="Username" name="Username"
+                        <i class="bi bi-envelope-fill input-icon"></i>
+                        <input type="email" asp-for="Email"
                                class="form-control-custom"
-                               placeholder="Nhập tên đăng nhập..."
-                               value="@(ViewContext.HttpContext.Request.HasFormContentType
-                                   ? ViewContext.HttpContext.Request.Form["Username"].ToString()
-                                   : "")"
-                               autocomplete="username" required/>
+                               placeholder="Nhập email whitelist (ví dụ: student@student.edu.vn)..." required/>
                     </div>
+                    <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
                 </div>
 
                 <!-- Password Input (icon inside + eye visibility) -->
                 <div class="form-group-custom mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label-custom mb-0" for="Password">Mật khẩu</label>
-                        <a href="#" class="forgot-password-link">Quên mật khẩu?</a>
-                    </div>
+                    <label class="form-label-custom" asp-for="Password">Mật khẩu</label>
                     <div class="input-password-wrap">
                         <i class="bi bi-lock-fill input-icon"></i>
-                        <input type="password" id="Password" name="Password"
+                        <input type="password" asp-for="Password" id="Password"
                                class="form-control-custom"
-                               placeholder="Nhập mật khẩu..."
-                               autocomplete="current-password" required/>
-                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword()">
+                               placeholder="Nhập mật khẩu..." required/>
+                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword('Password', 'pwdIcon')">
                             <i class="bi bi-eye" id="pwdIcon"></i>
                         </button>
                     </div>
+                    <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                 </div>
 
-                <!-- Modern Switch Checkbox -->
-                <div class="d-flex align-items-center justify-content-between mb-4">
-                    <div class="form-switch-custom">
-                        <input type="checkbox" id="RememberMe" name="RememberMe" value="true"/>
-                        <label for="RememberMe">Ghi nhớ đăng nhập</label>
+                <!-- Confirm Password Input (icon inside + eye visibility) -->
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" asp-for="ConfirmPassword">Xác nhận mật khẩu</label>
+                    <div class="input-password-wrap">
+                        <i class="bi bi-shield-lock-fill input-icon"></i>
+                        <input type="password" asp-for="ConfirmPassword" id="ConfirmPassword"
+                               class="form-control-custom"
+                               placeholder="Nhập lại mật khẩu..." required/>
+                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword('ConfirmPassword', 'confirmPwdIcon')">
+                            <i class="bi bi-eye" id="confirmPwdIcon"></i>
+                        </button>
                     </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
                 </div>
 
-                <!-- Login Action Button (Gradient animated, scale effect) -->
-                <button type="submit" class="btn-login" id="btnLogin">
-                    <span class="btn-text"><i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập</span>
+                <!-- Register Action Button (Gradient animated, scale effect) -->
+                <button type="submit" class="btn-login mb-3" id="btnRegister">
+                    <span class="btn-text"><i class="bi bi-person-plus-fill me-2"></i>Đăng ký tài khoản</span>
                     <span class="btn-loading d-none">
                         <span class="neural-pulse-spinner">
                             <span class="pulse-ring"></span>
                             <span class="pulse-dot"></span>
                         </span>
-                        Đang xác thực...
+                        Đang kiểm tra whitelist...
                     </span>
                 </button>
 
                 <div class="text-center mt-4">
-                    <span class="text-muted small">Bạn mới sử dụng hệ thống? </span>
-                    <a asp-action="Register" class="create-account-link">Đăng ký tài khoản</a>
+                    <span class="text-muted small">Đã có tài khoản? </span>
+                    <a asp-action="Login" class="create-account-link">Đăng nhập ngay</a>
                 </div>
             </form>
-
-            <!-- Redesigned Demo Credentials -->
-            <div class="demo-credentials mt-4">
-                <p class="demo-title"><i class="bi bi-info-circle me-1"></i> Đăng nhập nhanh tài khoản demo:</p>
-                <div class="demo-accounts-grid">
-                    <div class="demo-pill-card" onclick="fillLogin('admin','Admin@123')">
-                        <span class="badge-role badge-admin-pill">Admin</span>
-                        <span class="demo-username">admin</span>
-                    </div>
-                    <div class="demo-pill-card" onclick="fillLogin('nguyenvan_gv','Teacher@123')">
-                        <span class="badge-role badge-teacher-pill">Giảng viên</span>
-                        <span class="demo-username">nguyenvan_gv</span>
-                    </div>
-                    <div class="demo-pill-card" onclick="fillLogin('tranmanh_sv','Student@123')">
-                        <span class="badge-role badge-student-pill">Sinh viên</span>
-                        <span class="demo-username">tranmanh_sv</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -198,9 +173,9 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // Password toggle
-    function togglePassword() {
-        const pwd = document.getElementById('Password');
-        const icon = document.getElementById('pwdIcon');
+    function togglePassword(inputId, iconId) {
+        const pwd = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
         if (pwd.type === 'password') {
             pwd.type = 'text';
             icon.className = 'bi bi-eye-slash';
@@ -210,18 +185,12 @@
         }
     }
 
-    // Auto-fill demo credentials
-    function fillLogin(user, pass) {
-        document.getElementById('Username').value = user;
-        document.getElementById('Password').value = pass;
-    }
-
     // Submission spinner loader trigger
-    document.getElementById('loginForm').addEventListener('submit', function () {
+    document.getElementById('registerForm').addEventListener('submit', function () {
         document.querySelector('.btn-text').classList.add('d-none');
         document.querySelector('.btn-loading').classList.remove('d-none');
-        document.getElementById('btnLogin').style.pointerEvents = 'none';
-        document.getElementById('btnLogin').style.opacity = '0.9';
+        document.getElementById('btnRegister').style.pointerEvents = 'none';
+        document.getElementById('btnRegister').style.opacity = '0.9';
     });
 
     // Particle nodes connection animation on canvas

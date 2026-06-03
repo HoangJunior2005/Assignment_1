@@ -16,6 +16,7 @@ namespace LearningDocumentSystem.Data.DbContexts
         public DbSet<Document> Documents { get; set; } = null!;
         public DbSet<DocumentChunk> DocumentChunks { get; set; } = null!;
         public DbSet<Embedding> Embeddings { get; set; } = null!;
+        public DbSet<AllowedEmail> AllowedEmails { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -36,7 +37,22 @@ namespace LearningDocumentSystem.Data.DbContexts
                 entity.Property(u => u.Email).IsRequired().HasMaxLength(100);
                 entity.HasIndex(u => u.Email).IsUnique();
                 entity.Property(u => u.IsActive).HasDefaultValue(true);
+                entity.Property(u => u.CanUpload).HasDefaultValue(true);
                 entity.Property(u => u.CreatedAt).HasDefaultValueSql("GETDATE()");
+            });
+
+            // ============================================================
+            // BẢNG AllowedEmails
+            // ============================================================
+            modelBuilder.Entity<AllowedEmail>(entity =>
+            {
+                entity.ToTable("AllowedEmails");
+                entity.HasKey(ae => ae.Id);
+                entity.Property(ae => ae.Id).UseIdentityColumn();
+                entity.Property(ae => ae.Email).IsRequired().HasMaxLength(100);
+                entity.HasIndex(ae => ae.Email).IsUnique();
+                entity.Property(ae => ae.IsUsed).HasDefaultValue(false);
+                entity.Property(ae => ae.CreatedAt).HasDefaultValueSql("GETDATE()");
             });
 
             // ============================================================

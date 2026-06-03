@@ -48,7 +48,8 @@ namespace LearningDocumentSystem.Web.Controllers
                 new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
                 new(ClaimTypes.Name, user.Username),
                 new("FullName", user.FullName),
-                new(ClaimTypes.Email, user.Email)
+                new(ClaimTypes.Email, user.Email),
+                new("CanUpload", user.CanUpload.ToString())
             };
 
             // Thêm role claims
@@ -82,6 +83,44 @@ namespace LearningDocumentSystem.Web.Controllers
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             _logger.LogInformation("User logged out.");
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult Register()
+        {
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToAction("Index", "Home");
+
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model)
+        {
+            if (!ModelState.IsValid) return View(model);
+
+            try
+            {
+                await _authService.RegisterAsync(model.Email, model.Password);
+                TempData["Success"] = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
+                return RedirectToAction("Login");
+            }
+            catch (ArgumentException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Registration failed for {Email}.", model.Email);
+                ModelState.AddModelError(string.Empty, "Đã xảy ra lỗi hệ thống khi đăng ký.");
+            }
+
+            return View(model);
         }
 
         public IActionResult AccessDenied()

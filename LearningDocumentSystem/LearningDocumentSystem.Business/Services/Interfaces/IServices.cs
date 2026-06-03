@@ -7,6 +7,20 @@ namespace LearningDocumentSystem.Business.Services.Interfaces
     {
         Task<UserDto?> LoginAsync(string username, string password);
         Task<bool> IsUsernameAvailableAsync(string username);
+        Task<UserDto> RegisterAsync(string email, string password);
+    }
+
+    public interface IAdminUserService
+    {
+        Task<IEnumerable<UserDto>> GetAllUsersAsync();
+        Task<IEnumerable<RoleDto>> GetAllRolesAsync();
+        Task UpdateUserRolesAsync(int userId, IEnumerable<int> roleIds, bool canUpload);
+        Task<int> ImportAllowedEmailsAsync(IFormFile file);
+        Task<IEnumerable<AllowedEmailDto>> GetAllowedEmailsAsync();
+        Task DeleteAllowedEmailAsync(int id);
+        Task CreateTeacherAccountAsync(string email, string fullName, string password);
+        Task DeleteUserAsync(int userId);
+        Task UpdateUploadPermissionAsync(int userId, bool canUpload);
     }
 
     public interface ISubjectService

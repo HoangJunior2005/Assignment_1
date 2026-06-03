@@ -1,0 +1,283 @@
+@model LearningDocumentSystem.Web.ViewModels.UserRoleManageViewModel
+@using LearningDocumentSystem.Common.Constants
+@{
+    ViewData["Title"] = "Quản lý quyền";
+}
+
+<!-- Anti-forgery token for AJAX requests -->
+@Html.AntiForgeryToken()
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="page-title"><i class="bi bi-people-fill me-2"></i>Quản lý quyền</h1>
+        <p class="page-subtitle">Cấp quyền và quản lý tài khoản người dùng</p>
+    </div>
+    <div>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createTeacherModal">
+            <i class="bi bi-person-plus-fill me-1"></i>Thêm Giảng viên
+        </button>
+    </div>
+</div>
+
+<div class="card-custom">
+    <!-- Search & Filter Controls -->
+    <div class="row g-3 p-3 pb-0">
+        <div class="col-md-8 col-lg-6">
+            <div class="input-group shadow-sm rounded">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="userSearchInput" class="form-control border-start-0" placeholder="Tìm kiếm theo tài khoản, họ tên hoặc email..." />
+            </div>
+        </div>
+        <div class="col-md-4 col-lg-3">
+            <select id="roleFilterSelect" class="form-select shadow-sm">
+                <option value="">Tất cả Role</option>
+                <option value="Teacher">Teacher</option>
+                <option value="Student">Student</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card-custom-body p-0 mt-3">
+        @if (!Model.Users.Any())
+        {
+            <div class="empty-state py-5">
+                <i class="bi bi-people"></i>
+                <p>Không có tài khoản nào</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-clean mb-0 align-middle">
+                    <thead class="table-light text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th>Tài khoản</th>
+                            <th>Họ tên</th>
+                            <th>Email</th>
+                            <th>Trạng thái</th>
+                            <th>Role</th>
+                            <th class="text-center" style="width: 200px;">Quyền Upload (GV)</th>
+                            <th class="text-end" style="width: 150px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int i = 1; }
+                        @foreach (var u in Model.Users)
+                        {
+                            var isAdminUser = u.Roles.Contains(AppConstants.RoleAdmin);
+                            var currentRole = u.Roles.Contains(AppConstants.RoleAdmin) ? "Admin" : (u.Roles.Contains(AppConstants.RoleTeacher) ? "Teacher" : "Student");
+                            
+                            <tr class="user-row" data-fullname="@u.FullName" data-username="@u.Username" data-email="@u.Email" data-current-role="@currentRole">
+                                <td class="text-muted">@(i++)</td>
+                                <td class="fw-semibold">@u.Username</td>
+                                <td>@u.FullName</td>
+                                <td>@u.Email</td>
+                                <td>
+                                    @if (u.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success">Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Khóa</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (currentRole == "Admin")
+                                    {
+                                        <span class="badge bg-dark-subtle text-dark">Admin</span>
+                                    }
+                                    else if (currentRole == "Teacher")
+                                    {
+                                        <span class="badge bg-info-subtle text-info">Teacher</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary">Student</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (currentRole == "Teacher")
+                                    {
+                                        <div class="form-check form-switch mb-0 d-inline-block">
+                                            <input class="form-check-input upload-permission-switch" type="checkbox" name="canUpload" value="true" @(u.CanUpload ? "checked" : "") data-user-id="@u.UserID" id="canUpload_@u.UserID" />
+                                            <label class="form-check-label text-muted small ms-1" for="canUpload_@u.UserID">Cho phép</label>
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (!isAdminUser)
+                                    {
+                                        <form asp-action="DeleteUser" asp-route-id="@u.UserID" method="post" class="d-inline delete-confirm-form" data-message="Bạn có chắc chắn muốn xóa người dùng @u.FullName?">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa tài khoản">
+                                                <i class="bi bi-trash"></i> Xóa
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal: Tạo tài khoản giảng viên -->
+<div class="modal fade" id="createTeacherModal" tabindex="-1" aria-labelledby="createTeacherModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="createTeacherModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i>Thêm Tài Khoản Giảng Viên
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="CreateTeacher" asp-controller="AdminUser" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="teacherEmail" class="form-label fw-semibold">Email Giảng viên</label>
+                        <input type="email" class="form-control" id="teacherEmail" name="email" required placeholder="example@university.edu.vn" />
+                        <div class="form-text">Email dùng để đăng nhập và nhận thông tin tài khoản.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="teacherFullName" class="form-label fw-semibold">Họ và tên</label>
+                        <input type="text" class="form-control" id="teacherFullName" name="fullName" required placeholder="Nguyễn Văn A" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="teacherPassword" class="form-label fw-semibold">Mật khẩu khởi tạo</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="teacherPassword" name="password" required minlength="6" placeholder="******" />
+                            <button class="btn btn-outline-secondary" type="button" id="btnToggleTeacherPwd" onclick="toggleTeacherPassword()">
+                                <i class="bi bi-eye" id="teacherPwdIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Mật khẩu phải chứa ít nhất 6 ký tự.</div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Tạo tài khoản
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Retrieve anti-forgery token from the page
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        // Auto-save upload permission toggle via AJAX
+        document.querySelectorAll('.upload-permission-switch').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const userId = this.getAttribute('data-user-id');
+                const canUpload = this.checked;
+                
+                const formData = new FormData();
+                formData.append('userId', userId);
+                formData.append('canUpload', canUpload);
+                if (token) {
+                    formData.append('__RequestVerificationToken', token);
+                }
+                
+                // Show a brief loading indicator or disable during request
+                this.disabled = true;
+                
+                fetch('/admin/update-upload-permission', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    this.disabled = false;
+                    if (!response.ok) {
+                        alert('Đã xảy ra lỗi khi cập nhật quyền upload.');
+                        this.checked = !canUpload; // Revert checkbox state
+                    }
+                })
+                .catch(error => {
+                    this.disabled = false;
+                    console.error('Error:', error);
+                    alert('Đã xảy ra lỗi kết nối khi cập nhật quyền upload.');
+                    this.checked = !canUpload; // Revert checkbox state
+                });
+            });
+        });
+
+        // Client-side search and filtering logic
+        const searchInput = document.getElementById('userSearchInput');
+        const roleFilter = document.getElementById('roleFilterSelect');
+
+        function filterUsers() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const selectedRole = roleFilter.value;
+
+            document.querySelectorAll('.user-row').forEach(row => {
+                const fullname = (row.getAttribute('data-fullname') || '').toLowerCase();
+                const username = (row.getAttribute('data-username') || '').toLowerCase();
+                const email = (row.getAttribute('data-email') || '').toLowerCase();
+                const currentRole = row.getAttribute('data-current-role') || '';
+
+                const matchesSearch = fullname.includes(searchTerm) || 
+                                      username.includes(searchTerm) || 
+                                      email.includes(searchTerm);
+                
+                const matchesRole = !selectedRole || currentRole === selectedRole;
+
+                if (matchesSearch && matchesRole) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        if (searchInput) searchInput.addEventListener('input', filterUsers);
+        if (roleFilter) roleFilter.addEventListener('change', filterUsers);
+
+        // Intercept delete form submissions and display SweetAlert2 confirmation modal
+        document.querySelectorAll('.delete-confirm-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = this.getAttribute('data-message') || 'Bạn có chắc chắn muốn xóa không?';
+                
+                Swal.fire({
+                    title: 'Xác nhận xóa',
+                    text: message,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Hủy',
+                    customClass: {
+                        popup: 'shadow rounded border-0'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+
+        function toggleTeacherPassword() {
+            const pwdInput = document.getElementById('teacherPassword');
+            const pwdIcon = document.getElementById('teacherPwdIcon');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                pwdIcon.className = 'bi bi-eye-slash';
+            } else {
+                pwdInput.type = 'password';
+                pwdIcon.className = 'bi bi-eye';
+            }
+        }
+    </script>
+}
