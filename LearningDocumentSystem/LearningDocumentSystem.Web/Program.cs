@@ -36,9 +36,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly",   p => p.RequireRole(AppConstants.RoleAdmin));
-    options.AddPolicy("TeacherUp",  p => p.RequireRole(AppConstants.RoleAdmin, AppConstants.RoleTeacher));
-    options.AddPolicy("AllUsers",   p => p.RequireAuthenticatedUser());
+    options.AddPolicy("AdminOnly",        p => p.RequireRole(AppConstants.RoleAdmin));
+    options.AddPolicy("TeacherUp",        p => p.RequireAssertion(context =>
+        context.User.IsInRole(AppConstants.RoleAdmin) ||
+        (context.User.IsInRole(AppConstants.RoleTeacher) && context.User.HasClaim(c => c.Type == "CanUpload" && c.Value == "True"))
+    ));
+    options.AddPolicy("TeacherOrStudent", p => p.RequireRole(AppConstants.RoleTeacher, AppConstants.RoleStudent));
+    options.AddPolicy("AllUsers",        p => p.RequireAuthenticatedUser());
 });
 
 // ============================================================

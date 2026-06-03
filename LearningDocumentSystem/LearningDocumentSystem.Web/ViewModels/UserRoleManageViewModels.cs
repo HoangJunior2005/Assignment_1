@@ -9,6 +9,7 @@ namespace LearningDocumentSystem.Web.ViewModels
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool CanUpload { get; set; }
         public List<string> Roles { get; set; } = new();
         public List<int> AssignedRoleIds { get; set; } = new();
     }

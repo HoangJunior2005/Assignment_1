@@ -15,6 +15,7 @@ namespace LearningDocumentSystem.Business.Mapping
                     opt => opt.MapFrom(src => src.UserRoles.Select(ur => ur.Role.RoleName).ToList()));
 
             CreateMap<Role, RoleDto>();
+            CreateMap<AllowedEmail, AllowedEmailDto>();
 
             // Subject
             CreateMap<Subject, SubjectDto>()

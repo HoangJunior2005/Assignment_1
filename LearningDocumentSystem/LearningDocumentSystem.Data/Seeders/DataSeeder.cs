@@ -73,6 +73,7 @@ namespace LearningDocumentSystem.Data.Seeders
                     FullName     = "Quản Trị Viên",
                     Email        = "admin@university.edu.vn",
                     IsActive     = true,
+                    CanUpload    = true,
                     CreatedAt    = DateTime.UtcNow
                 },
                 new()
@@ -83,6 +84,7 @@ namespace LearningDocumentSystem.Data.Seeders
                     FullName     = "Nguyễn Văn Giảng Viên",
                     Email        = "teacher@university.edu.vn",
                     IsActive     = true,
+                    CanUpload    = true,
                     CreatedAt    = DateTime.UtcNow
                 },
                 new()

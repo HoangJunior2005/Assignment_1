@@ -1,0 +1,182 @@
+@model IEnumerable<LearningDocumentSystem.Business.DTOs.AllowedEmailDto>
+@{
+    ViewData["Title"] = "Whitelist Email";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-envelope-check-fill me-2"></i>Whitelist Email</h1>
+        <p class="page-subtitle">Quản lý danh sách email được phép tự đăng ký tài khoản Sinh viên</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Upload Card -->
+    <div class="col-md-5">
+        <div class="card-custom h-100">
+            <div class="card-custom-header">
+                <h5><i class="bi bi-file-earmark-excel-fill me-2 text-success"></i>Import Whitelist</h5>
+            </div>
+            <div class="card-custom-body">
+                <p class="text-muted small mb-4">
+                    Tải lên danh sách các địa chỉ email được phép đăng ký tài khoản Sinh viên.
+                    <br/><br/>
+                    <strong>Yêu cầu file Excel (.xlsx):</strong>
+                    <br/>
+                    • Phải chứa đúng 1 cột có tiêu đề là <code>Email</code> ở hàng đầu tiên.
+                    <br/>
+                    • Định dạng email phải hợp lệ.
+                    <br/>
+                    • Hệ thống tự động lọc bỏ các email trùng lặp hoặc đã tồn tại.
+                </p>
+
+                <form asp-action="ImportEmails" asp-controller="AdminUser" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Chọn file Excel</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx" required />
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-cloud-upload-fill me-1"></i>Nhập dữ liệu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Card -->
+    <div class="col-md-7">
+        <div class="card-custom h-100">
+            <div class="card-custom-header d-flex justify-content-between align-items-center">
+                <h5><i class="bi bi-info-circle-fill me-2 text-primary"></i>Thông tin Whitelist</h5>
+                <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-2" style="font-size: 0.9rem;">
+                    Tổng số: @Model.Count() email
+                </span>
+            </div>
+            <div class="card-custom-body d-flex flex-column justify-content-around">
+                <div class="row text-center g-3">
+                    <div class="col-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h3 class="fw-bold text-success mb-1">
+                                @Model.Count(e => e.IsUsed)
+                            </h3>
+                            <span class="text-muted small">Đã đăng ký</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h3 class="fw-bold text-warning mb-1">
+                                @Model.Count(e => !e.IsUsed)
+                            </h3>
+                            <span class="text-muted small">Chưa sử dụng</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info border-0 shadow-none mb-0 mt-4 d-flex align-items-start">
+                    <i class="bi bi-lightbulb-fill text-info me-2 fs-5"></i>
+                    <div class="small">
+                        Khi người dùng đăng ký bằng email có trong whitelist này, hệ thống sẽ tự động gán vai trò <strong>Sinh viên (Student)</strong>.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Whitelist Table -->
+<div class="card-custom">
+    <div class="card-custom-header">
+        <h5><i class="bi bi-list-ul me-2"></i>Danh sách Email Whitelist</h5>
+    </div>
+    <div class="card-custom-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="empty-state py-5 text-center">
+                <i class="bi bi-envelope text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">Chưa có email nào trong danh sách whitelist.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-hover table-clean mb-0 align-middle">
+                    <thead class="table-light text-uppercase text-muted sticky-top" style="font-size: 0.75rem; letter-spacing: 0.05em; z-index: 10;">
+                        <tr>
+                            <th style="width: 80px;">#</th>
+                            <th>Địa chỉ Email</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày thêm</th>
+                            <th class="text-end" style="width: 100px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ int idx = 1; }
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="text-muted">@(idx++)</td>
+                                <td class="fw-semibold">@item.Email</td>
+                                <td>
+                                    @if (item.IsUsed)
+                                    {
+                                        <span class="badge bg-success-subtle text-success">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Đã sử dụng
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-subtle text-warning">
+                                            <i class="bi bi-hourglass-split me-1"></i>Chưa sử dụng
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-muted">
+                                    @item.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="text-end">
+                                    <form asp-action="DeleteEmail" asp-controller="AdminUser" asp-route-id="@item.Id" method="post" class="d-inline delete-confirm-form" data-message="Bạn có chắc chắn muốn xóa email @item.Email khỏi Whitelist?">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Xóa">
+                                            <i class="bi bi-trash fs-5"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Intercept delete form submissions and display SweetAlert2 confirmation modal
+        document.querySelectorAll('.delete-confirm-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const message = this.getAttribute('data-message') || 'Bạn có chắc chắn muốn xóa không?';
+                
+                Swal.fire({
+                    title: 'Xác nhận xóa',
+                    text: message,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Đồng ý',
+                    cancelButtonText: 'Hủy',
+                    customClass: {
+                        popup: 'shadow rounded border-0'
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        this.submit();
+                    }
+                });
+            });
+        });
+    </script>
+}

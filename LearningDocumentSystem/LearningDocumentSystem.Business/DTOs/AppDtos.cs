@@ -25,6 +25,7 @@ namespace LearningDocumentSystem.Business.DTOs
         public string FullName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public bool CanUpload { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<string> Roles { get; set; } = new();
     }
@@ -33,6 +34,14 @@ namespace LearningDocumentSystem.Business.DTOs
     {
         public int RoleID { get; set; }
         public string RoleName { get; set; } = string.Empty;
+    }
+
+    public class AllowedEmailDto
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public bool IsUsed { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     // ================================================================

@@ -1,0 +1,138 @@
+@model LearningDocumentSystem.Web.ViewModels.RegisterViewModel
+@{
+    Layout = null; // No layout for register page
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Đăng ký tài khoản — LDS System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="auth-body">
+
+<div class="auth-container">
+    <!-- Left Panel - Branding -->
+    <div class="auth-left">
+        <div class="auth-brand">
+            <div class="auth-logo">
+                <i class="bi bi-mortarboard-fill"></i>
+            </div>
+            <h1 class="auth-title">LDS System</h1>
+            <p class="auth-subtitle">Learning Document System</p>
+            <p class="auth-desc">Hệ thống quản lý tài liệu học tập tích hợp AI/RAG. Whitelist đăng ký thông qua danh sách email được phê duyệt.</p>
+        </div>
+        <div class="auth-features">
+            <div class="feature-item"><i class="bi bi-cloud-upload-fill"></i> Whitelist Verification</div>
+            <div class="feature-item"><i class="bi bi-person-badge-fill"></i> Role Auto-assignment</div>
+            <div class="feature-item"><i class="bi bi-shield-lock-fill"></i> Secure Passwords</div>
+            <div class="feature-item"><i class="bi bi-database-fill-check"></i> LMS Integrated</div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Register Form -->
+    <div class="auth-right">
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h2>Đăng ký tài khoản</h2>
+                <p>Nhập email của bạn (phải nằm trong whitelist của hệ thống).</p>
+            </div>
+
+            <form asp-action="Register" method="post" id="registerForm">
+                @Html.AntiForgeryToken()
+
+                @{
+                    var summaryErrors = ViewData.ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList();
+                }
+                @if (summaryErrors.Any())
+                {
+                    <div class="alert alert-danger d-flex align-items-center mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <span>@summaryErrors.First()</span>
+                    </div>
+                }
+
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" asp-for="Email">
+                        <i class="bi bi-envelope-fill me-1"></i> Địa chỉ Email
+                    </label>
+                    <input type="email" asp-for="Email"
+                           class="form-control form-control-custom"
+                           placeholder="Nhập email whitelist (ví dụ: student@student.edu.vn)..." required/>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" asp-for="Password">
+                        <i class="bi bi-lock-fill me-1"></i> Mật khẩu
+                    </label>
+                    <div class="input-password-wrap">
+                        <input type="password" asp-for="Password" id="Password"
+                               class="form-control form-control-custom"
+                               placeholder="Nhập mật khẩu..." required/>
+                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword('Password', 'pwdIcon')">
+                            <i class="bi bi-eye" id="pwdIcon"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="form-group-custom mb-4">
+                    <label class="form-label-custom" asp-for="ConfirmPassword">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Xác nhận mật khẩu
+                    </label>
+                    <div class="input-password-wrap">
+                        <input type="password" asp-for="ConfirmPassword" id="ConfirmPassword"
+                               class="form-control form-control-custom"
+                               placeholder="Nhập lại mật khẩu..." required/>
+                        <button type="button" class="btn-toggle-pwd" onclick="togglePassword('ConfirmPassword', 'confirmPwdIcon')">
+                            <i class="bi bi-eye" id="confirmPwdIcon"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn-login mb-3" id="btnRegister">
+                    <span class="btn-text"><i class="bi bi-person-plus-fill me-2"></i>Đăng ký tài khoản</span>
+                    <span class="btn-loading d-none">
+                        <span class="spinner-border spinner-border-sm me-2"></span> Đang kiểm tra whitelist...
+                    </span>
+                </button>
+
+                <div class="text-center mt-3">
+                    <span class="text-muted small">Đã có tài khoản? </span>
+                    <a asp-action="Login" class="small fw-semibold text-primary text-decoration-none">Đăng nhập ngay</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function togglePassword(inputId, iconId) {
+        const pwd = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (pwd.type === 'password') {
+            pwd.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            pwd.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', function () {
+        document.querySelector('.btn-text').classList.add('d-none');
+        document.querySelector('.btn-loading').classList.remove('d-none');
+    });
+</script>
+</body>
+</html>
