@@ -11,35 +11,83 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="auth-body">
 
+<!-- Background Glow Spheres -->
+<div class="ambient-glow bg-glow-1"></div>
+<div class="ambient-glow bg-glow-2"></div>
+
 <div class="auth-container">
-    <!-- Left Panel - Branding -->
+    <!-- Left Panel - Branding + Neural Connections -->
     <div class="auth-left">
+        <!-- Connecting Particles Canvas -->
+        <canvas id="neuralCanvas" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index:0; opacity: 0.45;"></canvas>
+        
         <div class="auth-brand">
-            <div class="auth-logo">
-                <i class="bi bi-mortarboard-fill"></i>
+            <div class="logo-wrapper">
+                <div class="auth-logo">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <!-- AI Active Status Pulse Dot -->
+                <span class="ai-pulse-dot"></span>
+                <!-- RAG Active Badge -->
+                <span class="rag-badge"><i class="bi bi-cpu-fill"></i> Kích hoạt RAG</span>
             </div>
+            
             <h1 class="auth-title">LDS System</h1>
-            <p class="auth-subtitle">Learning Document System</p>
-            <p class="auth-desc">Hệ thống quản lý tài liệu học tập tích hợp AI/RAG. Whitelist đăng ký thông qua danh sách email được phê duyệt.</p>
+            <p class="auth-subtitle">Hệ thống tài liệu học tập tích hợp AI</p>
+            <p class="auth-desc">Tải lên, tìm kiếm và hiểu rõ tài liệu của bạn với trợ lý AI dựa trên công nghệ RAG.</p>
         </div>
-        <div class="auth-features">
-            <div class="feature-item"><i class="bi bi-cloud-upload-fill"></i> Whitelist Verification</div>
-            <div class="feature-item"><i class="bi bi-person-badge-fill"></i> Role Auto-assignment</div>
-            <div class="feature-item"><i class="bi bi-shield-lock-fill"></i> Secure Passwords</div>
-            <div class="feature-item"><i class="bi bi-database-fill-check"></i> LMS Integrated</div>
+        
+        <!-- Modern SaaS-style Feature Cards Grid -->
+        <div class="auth-features-grid">
+            <div class="feature-card">
+                <div class="feature-card-icon bg-primary-subtle">
+                    <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Nạp tài liệu thông minh</h6>
+                    <p>Hỗ trợ PDF / DOCX / PPTX</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-success-subtle">
+                    <i class="bi bi-search"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Tìm kiếm ngữ nghĩa AI</h6>
+                    <p>Truy vấn ngữ cảnh nâng cao</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-info-subtle">
+                    <i class="bi bi-layers-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Phân mảnh & Nhúng tự động</h6>
+                    <p>Pipeline xử lý vector tự động</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-warning-subtle">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Kiểm soát truy cập</h6>
+                    <p>Bảo mật phân quyền (RBAC)</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Right Panel - Register Form -->
+    <!-- Right Panel - Glassmorphic Form Card -->
     <div class="auth-right">
         <div class="auth-card">
             <div class="auth-card-header">
                 <h2>Đăng ký tài khoản</h2>
-                <p>Nhập email của bạn (phải nằm trong whitelist của hệ thống).</p>
+                <p>Tham gia không gian học tập tích hợp AI</p>
             </div>
 
             <form asp-action="Register" method="post" id="registerForm">
@@ -53,62 +101,69 @@
                 }
                 @if (summaryErrors.Any())
                 {
-                    <div class="alert alert-danger d-flex align-items-center mb-3">
+                    <div class="alert alert-danger-custom d-flex align-items-center mb-4">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <span>@summaryErrors.First()</span>
                     </div>
                 }
 
+                <!-- Email Input (icon inside) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" asp-for="Email">
-                        <i class="bi bi-envelope-fill me-1"></i> Địa chỉ Email
-                    </label>
-                    <input type="email" asp-for="Email"
-                           class="form-control form-control-custom"
-                           placeholder="Nhập email whitelist (ví dụ: student@student.edu.vn)..." required/>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
+                    <label class="form-label-custom" asp-for="Email">Địa chỉ Email</label>
+                    <div class="input-icon-wrap">
+                        <i class="bi bi-envelope-fill input-icon"></i>
+                        <input type="email" asp-for="Email"
+                               class="form-control-custom"
+                               placeholder="Nhập email whitelist (ví dụ: student@student.edu.vn)..." required/>
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small mt-1 d-block"></span>
                 </div>
 
+                <!-- Password Input (icon inside + eye visibility) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" asp-for="Password">
-                        <i class="bi bi-lock-fill me-1"></i> Mật khẩu
-                    </label>
+                    <label class="form-label-custom" asp-for="Password">Mật khẩu</label>
                     <div class="input-password-wrap">
+                        <i class="bi bi-lock-fill input-icon"></i>
                         <input type="password" asp-for="Password" id="Password"
-                               class="form-control form-control-custom"
+                               class="form-control-custom"
                                placeholder="Nhập mật khẩu..." required/>
                         <button type="button" class="btn-toggle-pwd" onclick="togglePassword('Password', 'pwdIcon')">
                             <i class="bi bi-eye" id="pwdIcon"></i>
                         </button>
                     </div>
-                    <span asp-validation-for="Password" class="text-danger small"></span>
+                    <span asp-validation-for="Password" class="text-danger small mt-1 d-block"></span>
                 </div>
 
+                <!-- Confirm Password Input (icon inside + eye visibility) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" asp-for="ConfirmPassword">
-                        <i class="bi bi-shield-lock-fill me-1"></i> Xác nhận mật khẩu
-                    </label>
+                    <label class="form-label-custom" asp-for="ConfirmPassword">Xác nhận mật khẩu</label>
                     <div class="input-password-wrap">
+                        <i class="bi bi-shield-lock-fill input-icon"></i>
                         <input type="password" asp-for="ConfirmPassword" id="ConfirmPassword"
-                               class="form-control form-control-custom"
+                               class="form-control-custom"
                                placeholder="Nhập lại mật khẩu..." required/>
                         <button type="button" class="btn-toggle-pwd" onclick="togglePassword('ConfirmPassword', 'confirmPwdIcon')">
                             <i class="bi bi-eye" id="confirmPwdIcon"></i>
                         </button>
                     </div>
-                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small mt-1 d-block"></span>
                 </div>
 
+                <!-- Register Action Button (Gradient animated, scale effect) -->
                 <button type="submit" class="btn-login mb-3" id="btnRegister">
                     <span class="btn-text"><i class="bi bi-person-plus-fill me-2"></i>Đăng ký tài khoản</span>
                     <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2"></span> Đang kiểm tra whitelist...
+                        <span class="neural-pulse-spinner">
+                            <span class="pulse-ring"></span>
+                            <span class="pulse-dot"></span>
+                        </span>
+                        Đang kiểm tra whitelist...
                     </span>
                 </button>
 
-                <div class="text-center mt-3">
+                <div class="text-center mt-4">
                     <span class="text-muted small">Đã có tài khoản? </span>
-                    <a asp-action="Login" class="small fw-semibold text-primary text-decoration-none">Đăng nhập ngay</a>
+                    <a asp-action="Login" class="create-account-link">Đăng nhập ngay</a>
                 </div>
             </form>
         </div>
@@ -117,6 +172,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Password toggle
     function togglePassword(inputId, iconId) {
         const pwd = document.getElementById(inputId);
         const icon = document.getElementById(iconId);
@@ -129,10 +185,89 @@
         }
     }
 
+    // Submission spinner loader trigger
     document.getElementById('registerForm').addEventListener('submit', function () {
         document.querySelector('.btn-text').classList.add('d-none');
         document.querySelector('.btn-loading').classList.remove('d-none');
+        document.getElementById('btnRegister').style.pointerEvents = 'none';
+        document.getElementById('btnRegister').style.opacity = '0.9';
     });
+
+    // Particle nodes connection animation on canvas
+    (function () {
+        const canvas = document.getElementById('neuralCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 45;
+        const connectionDistance = 100;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.45;
+                this.vy = (Math.random() - 0.5) * 0.45;
+                this.radius = Math.random() * 2 + 1.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx = -this.vx;
+                if (this.y < 0 || this.y > canvas.height) this.vy = -this.vy;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(165, 180, 252, 0.35)';
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < connectionDistance) {
+                        const alpha = (1 - dist / connectionDistance) * 0.12;
+                        ctx.strokeStyle = `rgba(165, 180, 252, ${alpha})`;
+                        ctx.lineWidth = 0.7;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
 </script>
 </body>
 </html>

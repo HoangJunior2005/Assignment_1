@@ -10,42 +10,88 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="~/css/site.css"/>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="auth-body">
 
+<!-- Background Glow Spheres -->
+<div class="ambient-glow bg-glow-1"></div>
+<div class="ambient-glow bg-glow-2"></div>
+
 <div class="auth-container">
-    <!-- Left Panel - Branding -->
+    <!-- Left Panel - Branding + Neural Connections -->
     <div class="auth-left">
+        <!-- Connecting Particles Canvas -->
+        <canvas id="neuralCanvas" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events: none; z-index:0; opacity: 0.45;"></canvas>
+        
         <div class="auth-brand">
-            <div class="auth-logo">
-                <i class="bi bi-mortarboard-fill"></i>
+            <div class="logo-wrapper">
+                <div class="auth-logo">
+                    <i class="bi bi-mortarboard-fill"></i>
+                </div>
+                <!-- AI Active Status Pulse Dot -->
+                <span class="ai-pulse-dot"></span>
+                <!-- RAG Active Badge -->
+                <span class="rag-badge"><i class="bi bi-cpu-fill"></i> Kích hoạt RAG</span>
             </div>
+            
             <h1 class="auth-title">LDS System</h1>
-            <p class="auth-subtitle">Learning Document System</p>
-            <p class="auth-desc">Hệ thống quản lý tài liệu học tập tích hợp AI/RAG. Upload, phân tích và tìm kiếm tài liệu thông minh.</p>
+            <p class="auth-subtitle">Hệ thống tài liệu học tập tích hợp AI</p>
+            <p class="auth-desc">Tải lên, tìm kiếm và hiểu rõ tài liệu của bạn với trợ lý AI dựa trên công nghệ RAG.</p>
         </div>
-        <div class="auth-features">
-            <div class="feature-item"><i class="bi bi-cloud-upload-fill"></i> Upload PDF, DOCX, PPTX</div>
-            <div class="feature-item"><i class="bi bi-cpu-fill"></i> Auto Chunking & Embedding</div>
-            <div class="feature-item"><i class="bi bi-shield-check-fill"></i> RBAC Phân quyền</div>
-            <div class="feature-item"><i class="bi bi-search"></i> AI Search Ready</div>
+        
+        <!-- Modern SaaS-style Feature Cards Grid -->
+        <div class="auth-features-grid">
+            <div class="feature-card">
+                <div class="feature-card-icon bg-primary-subtle">
+                    <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Nạp tài liệu thông minh</h6>
+                    <p>Hỗ trợ PDF / DOCX / PPTX</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-success-subtle">
+                    <i class="bi bi-search"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Tìm kiếm ngữ nghĩa AI</h6>
+                    <p>Truy vấn ngữ cảnh nâng cao</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-info-subtle">
+                    <i class="bi bi-layers-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Phân mảnh & Nhúng tự động</h6>
+                    <p>Pipeline xử lý vector tự động</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-card-icon bg-warning-subtle">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div class="feature-card-content">
+                    <h6>Kiểm soát truy cập</h6>
+                    <p>Bảo mật phân quyền (RBAC)</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Right Panel - Login Form -->
+    <!-- Right Panel - Glassmorphic Form Card -->
     <div class="auth-right">
         <div class="auth-card">
             <div class="auth-card-header">
-                <h2>Đăng nhập</h2>
-                <p>Chào mừng trở lại! Vui lòng đăng nhập để tiếp tục.</p>
+                <h2>Chào mừng trở lại</h2>
+                <p>Đăng nhập để tiếp tục không gian học tập AI</p>
             </div>
 
             <form asp-action="Login" method="post" id="loginForm">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]"/>
-
-                <div asp-validation-summary="All" class="alert alert-danger" style="display:none"></div>
 
                 @{
                     var summaryErrors = ViewData.ModelState.Values
@@ -55,39 +101,44 @@
                 }
                 @if (summaryErrors.Any())
                 {
-                    <div class="alert alert-danger d-flex align-items-center mb-3">
+                    <div class="alert alert-danger-custom d-flex align-items-center mb-4">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
                         <span>@summaryErrors.First()</span>
                     </div>
                 }
                 @if (TempData["Success"] != null)
                 {
-                    <div class="alert alert-success d-flex align-items-center mb-3">
+                    <div class="alert alert-success-custom d-flex align-items-center mb-4">
                         <i class="bi bi-check-circle-fill me-2"></i>
                         <span>@TempData["Success"]</span>
                     </div>
                 }
 
+                <!-- Username Input (icon inside) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" for="Username">
-                        <i class="bi bi-person-fill me-1"></i> Tên đăng nhập
-                    </label>
-                    <input type="text" id="Username" name="Username"
-                           class="form-control form-control-custom"
-                           placeholder="Nhập tên đăng nhập..."
-                           value="@(ViewContext.HttpContext.Request.HasFormContentType
-                               ? ViewContext.HttpContext.Request.Form["Username"].ToString()
-                               : "")"
-                           autocomplete="username" required/>
+                    <label class="form-label-custom" for="Username">Tên đăng nhập</label>
+                    <div class="input-icon-wrap">
+                        <i class="bi bi-person-fill input-icon"></i>
+                        <input type="text" id="Username" name="Username"
+                               class="form-control-custom"
+                               placeholder="Nhập tên đăng nhập..."
+                               value="@(ViewContext.HttpContext.Request.HasFormContentType
+                                   ? ViewContext.HttpContext.Request.Form["Username"].ToString()
+                                   : "")"
+                               autocomplete="username" required/>
+                    </div>
                 </div>
 
+                <!-- Password Input (icon inside + eye visibility) -->
                 <div class="form-group-custom mb-4">
-                    <label class="form-label-custom" for="Password">
-                        <i class="bi bi-lock-fill me-1"></i> Mật khẩu
-                    </label>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label-custom mb-0" for="Password">Mật khẩu</label>
+                        <a href="#" class="forgot-password-link">Quên mật khẩu?</a>
+                    </div>
                     <div class="input-password-wrap">
+                        <i class="bi bi-lock-fill input-icon"></i>
                         <input type="password" id="Password" name="Password"
-                               class="form-control form-control-custom"
+                               class="form-control-custom"
                                placeholder="Nhập mật khẩu..."
                                autocomplete="current-password" required/>
                         <button type="button" class="btn-toggle-pwd" onclick="togglePassword()">
@@ -96,39 +147,48 @@
                     </div>
                 </div>
 
+                <!-- Modern Switch Checkbox -->
                 <div class="d-flex align-items-center justify-content-between mb-4">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="RememberMe" name="RememberMe" value="true"/>
-                        <label class="form-check-label" for="RememberMe">Ghi nhớ đăng nhập</label>
+                    <div class="form-switch-custom">
+                        <input type="checkbox" id="RememberMe" name="RememberMe" value="true"/>
+                        <label for="RememberMe">Ghi nhớ đăng nhập</label>
                     </div>
                 </div>
 
+                <!-- Login Action Button (Gradient animated, scale effect) -->
                 <button type="submit" class="btn-login" id="btnLogin">
                     <span class="btn-text"><i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập</span>
                     <span class="btn-loading d-none">
-                        <span class="spinner-border spinner-border-sm me-2"></span> Đang xử lý...
+                        <span class="neural-pulse-spinner">
+                            <span class="pulse-ring"></span>
+                            <span class="pulse-dot"></span>
+                        </span>
+                        Đang xác thực...
                     </span>
                 </button>
 
-                <div class="text-center mt-3">
-                    <span class="text-muted small">Chưa có tài khoản? </span>
-                    <a asp-action="Register" class="small fw-semibold text-primary text-decoration-none">Đăng ký tại đây</a>
+                <div class="text-center mt-4">
+                    <span class="text-muted small">Bạn mới sử dụng hệ thống? </span>
+                    <a asp-action="Register" class="create-account-link">Đăng ký tài khoản</a>
                 </div>
             </form>
 
-            <!-- Demo Credentials -->
+            <!-- Redesigned Demo Credentials -->
             <div class="demo-credentials mt-4">
-                <p class="demo-title"><i class="bi bi-info-circle me-1"></i> Tài khoản demo:</p>
-                <div class="demo-accounts">
-                    <span class="demo-acc" onclick="fillLogin('admin','Admin@123')">
-                        <i class="bi bi-shield-fill-check text-warning"></i> admin / Admin@123
-                    </span>
-                    <span class="demo-acc" onclick="fillLogin('nguyenvan_gv','Teacher@123')">
-                        <i class="bi bi-person-video3 text-primary"></i> nguyenvan_gv / Teacher@123
-                    </span>
-                    <span class="demo-acc" onclick="fillLogin('tranmanh_sv','Student@123')">
-                        <i class="bi bi-person-fill text-success"></i> tranmanh_sv / Student@123
-                    </span>
+                <p class="demo-title"><i class="bi bi-info-circle me-1"></i> Đăng nhập nhanh tài khoản demo:</p>
+                <div class="demo-accounts-grid">
+                    <div class="demo-pill-card" onclick="fillLogin('admin','Admin@123')">
+                        <span class="badge-role badge-admin-pill">Admin</span>
+                        <span class="demo-username">admin</span>
+                    </div>
+                    <div class="demo-pill-card" onclick="fillLogin('nguyenvan_gv','Teacher@123')">
+                        <span class="badge-role badge-teacher-pill">Giảng viên</span>
+                        <span class="demo-username">nguyenvan_gv</span>
+                    </div>
+                    <div class="demo-pill-card" onclick="fillLogin('tranmanh_sv','Student@123')">
+                        <span class="badge-role badge-student-pill">Sinh viên</span>
+                        <span class="demo-username">tranmanh_sv</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -137,6 +197,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Password toggle
     function togglePassword() {
         const pwd = document.getElementById('Password');
         const icon = document.getElementById('pwdIcon');
@@ -149,15 +210,95 @@
         }
     }
 
+    // Auto-fill demo credentials
     function fillLogin(user, pass) {
         document.getElementById('Username').value = user;
         document.getElementById('Password').value = pass;
     }
 
+    // Submission spinner loader trigger
     document.getElementById('loginForm').addEventListener('submit', function () {
         document.querySelector('.btn-text').classList.add('d-none');
         document.querySelector('.btn-loading').classList.remove('d-none');
+        document.getElementById('btnLogin').style.pointerEvents = 'none';
+        document.getElementById('btnLogin').style.opacity = '0.9';
     });
+
+    // Particle nodes connection animation on canvas
+    (function () {
+        const canvas = document.getElementById('neuralCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 45;
+        const connectionDistance = 100;
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.45;
+                this.vy = (Math.random() - 0.5) * 0.45;
+                this.radius = Math.random() * 2 + 1.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > canvas.width) this.vx = -this.vx;
+                if (this.y < 0 || this.y > canvas.height) this.vy = -this.vy;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(165, 180, 252, 0.35)';
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < connectionDistance) {
+                        const alpha = (1 - dist / connectionDistance) * 0.12;
+                        ctx.strokeStyle = `rgba(165, 180, 252, ${alpha})`;
+                        ctx.lineWidth = 0.7;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    })();
 </script>
 </body>
 </html>

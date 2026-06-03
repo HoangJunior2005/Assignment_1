@@ -150,7 +150,12 @@
                     </div>
                     <div class="mb-3">
                         <label for="teacherPassword" class="form-label fw-semibold">Mật khẩu khởi tạo</label>
-                        <input type="password" class="form-control" id="teacherPassword" name="password" required minlength="6" placeholder="******" />
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="teacherPassword" name="password" required minlength="6" placeholder="******" />
+                            <button class="btn btn-outline-secondary" type="button" id="btnToggleTeacherPwd" onclick="toggleTeacherPassword()">
+                                <i class="bi bi-eye" id="teacherPwdIcon"></i>
+                            </button>
+                        </div>
                         <div class="form-text">Mật khẩu phải chứa ít nhất 6 ký tự.</div>
                     </div>
                 </div>
@@ -262,5 +267,17 @@
                 });
             });
         });
+
+        function toggleTeacherPassword() {
+            const pwdInput = document.getElementById('teacherPassword');
+            const pwdIcon = document.getElementById('teacherPwdIcon');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                pwdIcon.className = 'bi bi-eye-slash';
+            } else {
+                pwdInput.type = 'password';
+                pwdIcon.className = 'bi bi-eye';
+            }
+        }
     </script>
 }
