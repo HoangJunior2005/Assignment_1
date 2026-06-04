@@ -179,5 +179,6 @@ namespace LearningDocumentSystem.Business.DTOs
         public int FailedDocuments { get; set; }
         public List<DocumentDto> RecentDocuments { get; set; } = new();
         public List<MonthlyUploadDto> MonthlyUploads { get; set; } = new();
+        public List<MonthlyUploadDto> MonthlyRegistrations { get; set; } = new();
     }
 }

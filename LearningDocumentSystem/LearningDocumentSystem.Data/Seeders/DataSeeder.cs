@@ -27,6 +27,7 @@ namespace LearningDocumentSystem.Data.Seeders
                 await SeedRolesAsync();
                 await SeedUsersAsync();
                 await SeedSubjectsAsync();
+                await SeedDocumentsAsync();
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("✅ Database seeded successfully.");
@@ -55,18 +56,19 @@ namespace LearningDocumentSystem.Data.Seeders
 
         private async Task SeedUsersAsync()
         {
-            if (await _context.Users.AnyAsync()) return;
-
-            _logger.LogInformation("Seeding users...");
+            _logger.LogInformation("Seeding users and roles...");
 
             var adminRole   = await _context.Roles.FirstAsync(r => r.RoleName == "Admin");
             var teacherRole = await _context.Roles.FirstAsync(r => r.RoleName == "Teacher");
             var studentRole = await _context.Roles.FirstAsync(r => r.RoleName == "Student");
 
-            // Password mẫu: Admin@123, Teacher@123, Student@123
-            var users = new List<User>
+            var now = DateTime.UtcNow;
+            var random = new Random(42);
+
+            // 1. Core Users
+            var coreUsers = new List<(User User, string RoleName)>
             {
-                new()
+                (new User
                 {
                     Username     = "admin",
                     PasswordHash = PasswordHelper.HashPassword("Admin@123"),
@@ -74,47 +76,91 @@ namespace LearningDocumentSystem.Data.Seeders
                     Email        = "admin@university.edu.vn",
                     IsActive     = true,
                     CanUpload    = true,
-                    CreatedAt    = DateTime.UtcNow
-                },
-                new()
+                    CreatedAt    = now
+                }, "Admin"),
+                (new User
                 {
-                    // Theo seed data trong file Word
                     Username     = "nguyenvan_gv",
                     PasswordHash = PasswordHelper.HashPassword("Teacher@123"),
                     FullName     = "Nguyễn Văn Giảng Viên",
                     Email        = "teacher@university.edu.vn",
                     IsActive     = true,
                     CanUpload    = true,
-                    CreatedAt    = DateTime.UtcNow
-                },
-                new()
+                    CreatedAt    = now
+                }, "Teacher"),
+                (new User
                 {
-                    // Theo seed data trong file Word
                     Username     = "tranmanh_sv",
                     PasswordHash = PasswordHelper.HashPassword("Student@123"),
                     FullName     = "Trần Mạnh Sinh Viên",
                     Email        = "student@student.edu.vn",
                     IsActive     = true,
-                    CreatedAt    = DateTime.UtcNow
-                }
+                    CreatedAt    = now
+                }, "Student")
             };
 
-            await _context.Users.AddRangeAsync(users);
-            await _context.SaveChangesAsync(); // Save để lấy UserID
+            // 2. Historical Users
+            var firstNames = new[] { "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Phan", "Vũ", "Võ", "Đặng", "Bùi" };
+            var middleNames = new[] { "Văn", "Thị", "Hữu", "Minh", "Quốc", "Đức", "Gia", "Thanh", "Ngọc", "Anh" };
+            var lastNames = new[] { "Anh", "Bình", "Chương", "Duy", "Giang", "Hải", "Khánh", "Linh", "Nam", "Sơn" };
 
-            // Gán quyền
-            var admin   = await _context.Users.FirstAsync(u => u.Username == "admin");
-            var teacher = await _context.Users.FirstAsync(u => u.Username == "nguyenvan_gv");
-            var student = await _context.Users.FirstAsync(u => u.Username == "tranmanh_sv");
+            var allSeedUsers = new List<(User User, string RoleName)>();
+            allSeedUsers.AddRange(coreUsers);
 
-            var userRoles = new List<UserRole>
+            for (int i = 1; i <= 11; i++)
             {
-                new() { UserID = admin.UserID,   RoleID = adminRole.RoleID },
-                new() { UserID = teacher.UserID, RoleID = teacherRole.RoleID },
-                new() { UserID = student.UserID, RoleID = studentRole.RoleID }
-            };
-            await _context.UserRoles.AddRangeAsync(userRoles);
-            await _context.SaveChangesAsync();
+                var createdDate = new DateTime(now.Year, now.Month, 1).AddMonths(-i).AddDays(random.Next(1, 28));
+
+                var teacher = new User
+                {
+                    Username     = $"gv_thang{now.AddMonths(-i).Month}",
+                    PasswordHash = PasswordHelper.HashPassword("Teacher@123"),
+                    FullName     = $"{firstNames[random.Next(firstNames.Length)]} {middleNames[random.Next(middleNames.Length)]} {lastNames[random.Next(lastNames.Length)]}",
+                    Email        = $"gv_thang{now.AddMonths(-i).Month}@university.edu.vn",
+                    IsActive     = true,
+                    CanUpload    = true,
+                    CreatedAt    = createdDate
+                };
+                allSeedUsers.Add((teacher, "Teacher"));
+
+                int studentCount = random.Next(2, 5); 
+                for (int j = 1; j <= studentCount; j++)
+                {
+                    var student = new User
+                    {
+                        Username     = $"sv_thang{now.AddMonths(-i).Month}_{j}",
+                        PasswordHash = PasswordHelper.HashPassword("Student@123"),
+                        FullName     = $"{firstNames[random.Next(firstNames.Length)]} {middleNames[random.Next(middleNames.Length)]} {lastNames[random.Next(lastNames.Length)]}",
+                        Email        = $"sv_thang{now.AddMonths(-i).Month}_{j}@student.edu.vn",
+                        IsActive     = true,
+                        CreatedAt    = createdDate
+                    };
+                    allSeedUsers.Add((student, "Student"));
+                }
+            }
+
+            foreach (var item in allSeedUsers)
+            {
+                if (!await _context.Users.AnyAsync(u => u.Username == item.User.Username))
+                {
+                    await _context.Users.AddAsync(item.User);
+                    await _context.SaveChangesAsync();
+
+                    var role = item.RoleName switch
+                    {
+                        "Admin" => adminRole,
+                        "Teacher" => teacherRole,
+                        _ => studentRole
+                    };
+
+                    await _context.UserRoles.AddAsync(new UserRole
+                    {
+                        UserID = item.User.UserID,
+                        RoleID = role.RoleID
+                    });
+                    await _context.SaveChangesAsync();
+                }
+            }
         }
 
         private async Task SeedSubjectsAsync()
@@ -163,6 +209,68 @@ namespace LearningDocumentSystem.Data.Seeders
             };
             await _context.Chapters.AddRangeAsync(chapters);
             await _context.SaveChangesAsync();
+        }
+
+        private async Task SeedDocumentsAsync()
+        {
+            if (await _context.Documents.AnyAsync(d => d.StoragePath.StartsWith("demo_"))) return;
+
+            _logger.LogInformation("Seeding historical documents...");
+
+            var teacher = await _context.Users.FirstOrDefaultAsync(u => u.Username == "nguyenvan_gv");
+            var chapter = await _context.Chapters.FirstOrDefaultAsync();
+
+            if (teacher == null || chapter == null)
+            {
+                _logger.LogWarning("Cannot seed documents because teacher or chapter is missing.");
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            var random = new Random(99);
+
+            var docTitles = new[] 
+            { 
+                "Giáo trình C# cơ bản", "Bài tập thực hành OOP", "Slide bài giảng Chương 1", 
+                "Tài liệu tham khảo .NET Core", "Hướng dẫn cài đặt Visual Studio", "Đề cương ôn tập",
+                "Đề thi mẫu giữa kỳ", "Bài đọc thêm về Design Patterns", "Tổng quan về LINQ",
+                "Xử lý ngoại lệ trong C#", "Làm việc với File và Stream", "Lập trình đa luồng cơ bản"
+            };
+
+            var fileTypes = new[] { "pdf", "docx", "pptx" };
+
+            var documents = new List<Document>();
+
+            for (int i = 1; i <= 11; i++)
+            {
+                var createdDate = new DateTime(now.Year, now.Month, 1).AddMonths(-i).AddDays(random.Next(1, 28));
+                
+                int docsCount = random.Next(1, 4); // 1 to 3 documents per month
+                for (int j = 1; j <= docsCount; j++)
+                {
+                    var title = $"{docTitles[random.Next(docTitles.Length)]} - V{j} (Tháng {createdDate.Month})";
+                    var ext = fileTypes[random.Next(fileTypes.Length)];
+                    var uniqueId = Guid.NewGuid().ToString()[..8];
+                    
+                    var document = new Document
+                    {
+                        ChapterID = chapter.ChapterID,
+                        Title = title,
+                        FileType = ext,
+                        StoragePath = $"demo_{uniqueId}.{ext}",
+                        FileSizeInBytes = random.Next(102400, 5242880), // 100 KB to 5 MB
+                        IndexStatus = "Indexed",
+                        UploadedBy = teacher.UserID,
+                        UploadedAt = createdDate,
+                        FileHash = Guid.NewGuid().ToString().Replace("-", "")
+                    };
+                    documents.Add(document);
+                }
+            }
+
+            await _context.Documents.AddRangeAsync(documents);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("✅ Seeded {Count} historical documents successfully.", documents.Count);
         }
     }
 }
