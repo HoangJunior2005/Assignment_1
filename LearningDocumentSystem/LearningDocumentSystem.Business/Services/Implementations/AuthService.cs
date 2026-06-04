@@ -353,7 +353,7 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 FullName = fullName,
                 PasswordHash = PasswordHelper.HashPassword(password),
                 IsActive = true,
-                CanUpload = true, // default manually created teacher upload permission to true
+                CanUpload = true,
                 CreatedAt = DateTime.UtcNow
             };
 
