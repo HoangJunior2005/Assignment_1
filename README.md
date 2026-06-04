@@ -129,12 +129,11 @@ dotnet run --project LearningDocumentSystem.Web
 
 Ứng dụng đã có sẵn 3 tài khoản demo sau khi seed dữ liệu:
 
-| Vai trò | Username | Mật khẩu |
+| Vai trò | Email | Mật khẩu |
 |---|---|---|
-| 🛡️ Admin | `admin` | `Admin@123` |
-| 👨‍🏫 Teacher | `nguyenvan_gv` | `Teacher@123` |
-| 🎓 Student | `tranmanh_sv` | `Student@123` |
-
+| 🛡️ Admin | `admin@university.edu.vn` | `Admin@123` |
+| 👨‍🏫 Teacher | `teacher@university.edu.vn` | `Teacher@123` |
+| 🎓 Student | `student@student.edu.vn` | `Student@123` |
 ---
 
 ## 📖 Hướng dẫn sử dụng
