@@ -155,48 +155,7 @@ File này chứa toàn bộ cấu hình hệ thống. Bạn cần chỉnh sửa 
 
 ## 🏗️ Kiến Trúc Hệ Thống (System Architecture)
 
-```
-┌─────────────────────────────────────────────────────┐
-│         📱 PRESENTATION LAYER (Web)                 │
-│  ┌──────────┬──────────────┬──────────┐              │
-│  │ Models   │ Controllers  │ Views    │              │
-│  └──────────┼──────────────┼──────────┘              │
-│             │ViewModels     │                        │
-│             └───────────────┘                        │
-└────────────────────┬────────────────────────────────┘
-                     │ Request/Response
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│         💼 BUSINESS LOGIC LAYER (Business)          │
-│  ┌─────────────┬──────────┬────────┐               │
-│  │  Services   │ Mapping  │ DTOs   │               │
-│  └─────────────┴──────────┴────────┘               │
-│  - AuthService                                      │
-│  - DocumentService (Upload/Chunking)               │
-│  - EmbeddingService (AI)                           │
-│  - ChatService                                      │
-└────────────────────┬────────────────────────────────┘
-                     │
-          ┌──────────┴──────────┐
-          ▼                     ▼
-┌─────────────────────┐  ┌──────────────────────┐
-│  🗄️ DATA LAYER      │  │ 🔌 EXTERNAL SERVICE │
-│  - UnitOfWork       │  │ - Google Gemini API│
-│  - Repositories     │  │ - File Storage     │
-│  - DbContexts       │  └──────────────────────┘
-│  - Entities         │
-│  - Helpers          │
-└────────┬────────────┘
-         │
-         ▼
-    ┌─────────────┐
-    │ 💾 SQL      │
-    │ SERVER      │
-    │ DATABASE    │
-    └─────────────┘
-```
-
----
+![img alt](https://github.com/HoangJunior2005/Assignment_1/blob/2ec258e8c015b27d86403c63a645f26ae76ce9a2/Solution.drawio.png)
 
 ## 🔄 Quy Trình Upload & Xử Lý Tài Liệu
 
@@ -260,68 +219,6 @@ File này chứa toàn bộ cấu hình hệ thống. Bạn cần chỉnh sửa 
 **Giải Pháp:**
 - Đăng nhập lại
 - Kiểm tra Admin đã cấp quyền upload cho tài khoản Teacher?
-
----
-
-## 📞 Hỗ Trợ Thêm
-
-Nếu gặp vấn đề, kiểm tra:
-1. **Log file:** `bin/Debug/` hoặc Output window
-2. **Database:** Xem dữ liệu bằng SQL Management Studio
-3. **Network:** Đảm bảo port 5000 không bị block
-
----
-
-## 📋 Sequence Diagram
-
-```mermaid
-sequenceDiagram
-    participant UI as MVC Controller
-    participant DS as DocumentService
-    participant FS as FileService
-    participant CS as ChunkingService
-    participant ES as EmbeddingService
-    participant DB as SQL Server
-
-    UI->>DS: UploadAsync(file, chapterId, title, userId)
-    DS->>DB: BeginTransaction
-    DS->>FS: SaveFileAsync
-    FS-->>DS: storageName
-    DS->>DB: Insert Document (Pending)
-    DS->>DB: Update status (Processing)
-    DS->>CS: ExtractChunksAsync(fullPath, fileType)
-    CS-->>DS: chunks
-    DS->>DB: Insert DocumentChunks
-    loop each chunk
-        DS->>ES: GenerateFakeEmbeddingAsync(content)
-        ES-->>DS: vectorJson
-    end
-    DS->>DB: Insert Embeddings
-    DS->>DB: Update status (Indexed)
-    DS->>DB: Commit
-    DS-->>UI: DocumentDto
-```
-
-## 💾 Thiết Kế Database
-
-Các bảng chính:
-- `Users`: Người dùng hệ thống
-- `Roles`: Các vai trò (Admin, Teacher, Student)
-- `UserRoles`: Quan hệ nhiều-nhiều giữa Users và Roles
-- `Subjects`: Các môn học
-- `Chapters`: Các chương
-- `Documents`: Tài liệu tải lên
-- `DocumentChunks`: Các đoạn của tài liệu
-- `Embeddings`: Vector biểu diễn cho mỗi chunk
-
-**Quan hệ:**
-- `Subject` (1) ↔ (n) `Chapter`
-- `Chapter` (1) ↔ (n) `Document`
-- `Document` (1) ↔ (n) `DocumentChunk`
-- `DocumentChunk` (1) ↔ (1) `Embedding`
-- `User` (n) ↔ (n) `Role` (qua `UserRoles`)
-
----
 
 ## 🔒 Mô Hình Authorization (Cập Nhật)
 
