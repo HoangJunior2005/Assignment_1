@@ -11,14 +11,25 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
         private const int VectorDimension = 512;
 
-        private static readonly HashSet<string> VietnameseStopWords = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> VietnameseStopWords = new()
         {
+            // Có dấu
             "và", "của", "là", "có", "trong", "cho", "với", "các", "được", "không",
             "này", "đó", "một", "những", "để", "hay", "hoặc", "thì", "mà", "khi",
             "về", "theo", "từ", "tại", "bởi", "vì", "nên", "đã", "sẽ", "đang",
             "rằng", "như", "cũng", "chỉ", "vào", "ra", "lên", "xuống", "qua",
             "trên", "dưới", "sau", "trước", "nếu", "vậy", "thế", "còn", "nhiều",
             "hơn", "nhất", "rất", "quá", "cả", "mọi", "bao", "gồm", "tất", "cần",
+
+            // Không dấu tương ứng (để lọc chính xác noAccent)
+            "va", "cua", "la", "co", "voi", "cac", "duoc", "khong",
+            "nay", "do", "mot", "nhung", "de", "hoac", "thi", "ma",
+            "ve", "tu", "tai", "boi", "vi", "da", "se", "dang",
+            "rang", "nhu", "cung", "chi", "vao", "len", "xuong",
+            "duoi", "truoc", "neu", "vay", "the", "con", "nhieu",
+            "hon", "nhat", "rat", "qua", "ca", "moi", "gom", "tat", "can",
+
+            // Tiếng Anh
             "the", "is", "in", "of", "and", "to", "a", "an", "for", "on", "at",
             "by", "with", "as", "be", "are", "was", "were", "has", "have", "had"
         };
@@ -46,19 +57,15 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 return Task.FromResult(JsonSerializer.Serialize(zeroVec));
             }
 
-            var termFrequency = ComputeTermFrequency(tokens);
-
             var vector = new float[VectorDimension];
 
-            foreach (var (term, rawTf) in termFrequency)
+            foreach (var term in tokens)
             {
-                float tfWeight = (float)(Math.Log(1.0 + rawTf) / Math.Log(1.0 + tokens.Count));
-
                 int hash = GetStableHash(term);
                 int index = Math.Abs(hash % VectorDimension);
 
                 float sign = (hash >= 0) ? 1f : -1f;
-                vector[index] += sign * tfWeight;
+                vector[index] += sign;
             }
 
             NormalizeL2(vector);
@@ -72,41 +79,44 @@ namespace LearningDocumentSystem.Business.Services.Implementations
             var lower = text.ToLowerInvariant();
 
             var wordMatches = Regex.Matches(lower, @"[\p{L}\p{N}]+");
-            var words = wordMatches
-                .Select(m => m.Value)
-                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w) && !VietnameseStopWords.Contains(RemoveDiacritics(w)))
-                .ToList();
-
-            var wordsNoAccents = wordMatches
-                .Select(m => RemoveDiacritics(m.Value))
-                .Where(w => w.Length >= 2 && !VietnameseStopWords.Contains(w) && !VietnameseStopWords.Contains(RemoveDiacritics(w)))
-                .ToList();
-
-            if (words.Count == 0 && wordsNoAccents.Count == 0) return new List<string>();
-
             var tokens = new List<string>();
-            tokens.AddRange(words);
-            tokens.AddRange(wordsNoAccents);
+            var processedWords = new List<(string Original, string NoAccent)>();
+
+            foreach (Match m in wordMatches)
+            {
+                var w = m.Value;
+                if (w.Length < 2) continue;
+
+                var noAccent = RemoveDiacritics(w);
+
+                // Skip if either the original or no-accent version is a stopword
+                if (VietnameseStopWords.Contains(w) || VietnameseStopWords.Contains(noAccent))
+                    continue;
+
+                processedWords.Add((w, noAccent));
+                tokens.Add(w);
+                if (w != noAccent)
+                {
+                    tokens.Add(noAccent);
+                }
+            }
+
+            if (processedWords.Count == 0) return new List<string>();
 
             // Add bigrams
-            for (int i = 0; i < words.Count - 1; i++)
+            for (int i = 0; i < processedWords.Count - 1; i++)
             {
-                tokens.Add($"{words[i]}_{words[i + 1]}");
-                tokens.Add($"{wordsNoAccents[i]}_{wordsNoAccents[i + 1]}");
+                var w1 = processedWords[i];
+                var w2 = processedWords[i + 1];
+
+                tokens.Add($"{w1.Original}_{w2.Original}");
+                if (w1.Original != w1.NoAccent || w2.Original != w2.NoAccent)
+                {
+                    tokens.Add($"{w1.NoAccent}_{w2.NoAccent}");
+                }
             }
 
             return tokens.Distinct().ToList();
-        }
-
-        private static Dictionary<string, int> ComputeTermFrequency(List<string> tokens)
-        {
-            var tf = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var token in tokens)
-            {
-                tf.TryGetValue(token, out int current);
-                tf[token] = current + 1;
-            }
-            return tf;
         }
 
         private static int GetStableHash(string term)

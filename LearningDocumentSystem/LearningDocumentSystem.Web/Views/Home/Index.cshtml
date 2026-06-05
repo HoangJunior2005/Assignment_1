@@ -48,9 +48,9 @@
     }
 </div>
 
-<!-- Monthly Upload Chart -->
+<!-- Charts Section -->
 <div class="row g-4 mb-4">
-    <div class="col-12">
+    <div class="@(User.IsInRole("Admin") ? "col-lg-6" : "col-12")">
         <div class="card-custom">
             <div class="card-custom-header">
                 <h5><i class="bi bi-graph-up-arrow me-2"></i>Tài liệu upload hàng tháng</h5>
@@ -63,6 +63,22 @@
             </div>
         </div>
     </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="col-lg-6">
+            <div class="card-custom">
+                <div class="card-custom-header">
+                    <h5><i class="bi bi-people-fill me-2"></i>Người dùng đăng ký mới</h5>
+                    <span class="badge bg-info-subtle text-info">12 tháng gần nhất</span>
+                </div>
+                <div class="card-custom-body">
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="monthlyRegistrationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 @if (!User.IsInRole("Admin"))
@@ -252,6 +268,83 @@
                     }
                 }
             });
+
+            // Monthly Registration Chart (Admin only)
+            const regCanvas = document.getElementById('monthlyRegistrationChart');
+            if (regCanvas) {
+                const regCtx = regCanvas.getContext('2d');
+                const regLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyRegistrations.Select(m => m.Label)));
+                const regData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.MonthlyRegistrations.Select(m => m.Count)));
+
+                const regGradient = regCtx.createLinearGradient(0, 0, 0, 300);
+                regGradient.addColorStop(0, 'rgba(6, 182, 212, 0.8)');
+                regGradient.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
+
+                new Chart(regCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: regLabels,
+                        datasets: [{
+                            label: 'Người dùng mới',
+                            data: regData,
+                            backgroundColor: regGradient,
+                            borderColor: 'rgba(6, 182, 212, 1)',
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            borderSkipped: false,
+                            hoverBackgroundColor: 'rgba(6, 182, 212, 0.95)',
+                            hoverBorderColor: 'rgba(8, 145, 178, 1)',
+                            hoverBorderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleColor: '#e2e8f0',
+                                bodyColor: '#fff',
+                                borderColor: 'rgba(6, 182, 212, 0.5)',
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function(items) { return 'Tháng ' + items[0].label; },
+                                    label: function(item) { return item.raw + ' tài khoản mới'; }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1,
+                                    color: '#94a3b8',
+                                    font: { size: 12, family: 'Inter' }
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    drawBorder: false
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#94a3b8',
+                                    font: { size: 11, family: 'Inter' }
+                                },
+                                grid: { display: false }
+                            }
+                        },
+                        animation: {
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
         });
     </script>
 }

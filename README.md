@@ -1,4 +1,4 @@
-# Learning Document System (Assignment 1)
+# 📚 Learning Document System
 
 Hệ thống quản lý tài liệu học tập cho phép tải lên PDF/DOCX/PPTX, chia nhỏ nội dung, và quản lý tài liệu theo chủ đề và chương.
 

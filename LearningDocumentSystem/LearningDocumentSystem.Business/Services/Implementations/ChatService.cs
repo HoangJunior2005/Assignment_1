@@ -86,10 +86,11 @@ namespace LearningDocumentSystem.Business.Services.Implementations
                 if (topChunks.Any())
                 {
                     float topScore = topChunks.First().Score;
-                    // Dynamic threshold: only keep chunks that are relatively close to the top score (>= 50% of top score)
-                    // and have a minimum absolute positive score of 0.01f.
+                    // Require a minimum absolute semantic similarity of 0.05 to filter out
+                    // completely unrelated documents, while still catching relevant chunks.
+                    // 512-dim dot product scores are naturally much lower than cosine similarity.
                     validChunks = topChunks
-                        .Where(tc => tc.Score > 0.01f && tc.Score >= topScore * 0.5f)
+                        .Where(tc => tc.Score >= 0.05f && tc.Score >= topScore * 0.5f)
                         .ToList();
                 }
                 else
@@ -99,11 +100,12 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
                 if (!validChunks.Any())
                 {
-                    _logger.LogWarning("No compatible 512-dim embeddings found. Falling back to keyword-only search.");
+                    _logger.LogWarning("No compatible 512-dim embeddings found or scores too low. Falling back to keyword-only search.");
 
                     var keywordScored = chunksInDb
                         .Select(c => (Score: ComputeKeywordBoost(question, c.ContentText), Chunk: c))
-                        .Where(x => x.Score > 0f)
+                        // Require meaningful keyword match (>= 0.35) to avoid false citations from partial overlap
+                        .Where(x => x.Score >= 0.35f)
                         .OrderByDescending(x => x.Score)
                         .Take(3)
                         .ToList();
@@ -149,13 +151,19 @@ namespace LearningDocumentSystem.Business.Services.Implementations
 
                 response.Answer = await _geminiService.GenerateAnswerAsync(question, contextBuilder.ToString());
 
+                // If AI indicates it couldn't find relevant information in the context, clear
+                // any sources that were tentatively attached (they would be misleading citations).
                 if (!string.IsNullOrEmpty(response.Answer) && 
                     (response.Answer.Contains("không tìm thấy", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("không có thông tin", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("không có trong", StringComparison.OrdinalIgnoreCase) ||
                      response.Answer.Contains("chưa được cấu hình", StringComparison.OrdinalIgnoreCase) ||
                      response.Answer.Contains("đã xảy ra lỗi", StringComparison.OrdinalIgnoreCase) ||
                      response.Answer.Contains("lỗi nội bộ", StringComparison.OrdinalIgnoreCase) ||
                      response.Answer.Contains("không nhận được", StringComparison.OrdinalIgnoreCase) ||
-                     response.Answer.Contains("không thể trích xuất", StringComparison.OrdinalIgnoreCase)))
+                     response.Answer.Contains("không thể trích xuất", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("ngoài phạm vi", StringComparison.OrdinalIgnoreCase) ||
+                     response.Answer.Contains("tài liệu không đề cập", StringComparison.OrdinalIgnoreCase)))
                 {
                     response.Sources.Clear();
                 }
